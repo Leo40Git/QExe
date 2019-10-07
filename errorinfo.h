@@ -8,8 +8,7 @@ namespace ErrorInfo {
     Q_NAMESPACE
 
     enum ErrorID {
-        Success = 0,
-        BadIODevice,
+        BadIODevice = 0,
         BadPEFile
     };
     Q_ENUM_NS(ErrorID);

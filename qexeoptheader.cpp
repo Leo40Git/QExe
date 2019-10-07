@@ -111,7 +111,6 @@ bool QExeOptHeader::read(QByteArray src, ErrorInfoStruct *errinfo) {
         imageDataDirectories += QPair<quint32, quint32>(rva, size);
     }
     buf.close();
-    SET_ERROR_INFO(Success, NoErrors)
     return true;
 }
 
