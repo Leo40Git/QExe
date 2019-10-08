@@ -1,5 +1,5 @@
-#ifndef QEXEOPTHEADER_H
-#define QEXEOPTHEADER_H
+#ifndef QEXEOPTIONALHEADER_H
+#define QEXEOPTIONALHEADER_H
 
 #include <QObject>
 #include <QSharedPointer>
@@ -11,7 +11,7 @@
 class QExe;
 #endif
 
-class QEXE_EXPORT QExeOptHeader : public QObject
+class QEXE_EXPORT QExeOptionalHeader : public QObject
 {
     Q_OBJECT
     friend class QExe;
@@ -55,7 +55,7 @@ public:
     Q_DECLARE_FLAGS(DLLCharacteristics, DLLCharacteristic)
     Q_FLAG(DLLCharacteristics)
 
-    inline quint32 size() const;
+    quint32 size() const;
 #define DECLARE_VERSION(name, size) quint ## size name ## VerMajor, name ## VerMinor;
     DECLARE_VERSION(linker, 8)
     quint32 entryPointAddr;
@@ -79,7 +79,7 @@ public:
     QSharedPointer<QList<QPair<quint32, quint32>>> dataDirectories();
 #undef DECLARE_VERSION
 private:
-    explicit QExeOptHeader(QObject *parent = nullptr);
+    explicit QExeOptionalHeader(QObject *parent = nullptr);
     bool read(QByteArray src, QExeErrorInfo *errinfo);
     QByteArray toBytes();
     QSharedPointer<QList<QPair<quint32, quint32>>> m_dataDirectories;
@@ -91,6 +91,6 @@ private:
     quint32 headerSize;
 };
 
-Q_DECLARE_OPERATORS_FOR_FLAGS(QExeOptHeader::DLLCharacteristics)
+Q_DECLARE_OPERATORS_FOR_FLAGS(QExeOptionalHeader::DLLCharacteristics)
 
-#endif // QEXEOPTHEADER_H
+#endif // QEXEOPTIONALHEADER_H

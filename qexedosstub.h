@@ -15,7 +15,7 @@ class QEXE_EXPORT QExeDOSStub : public QObject
     Q_OBJECT
     friend class QExe;
 public:
-    inline quint32 size() const;
+    quint32 size() const;
     QByteArray data;
 private:
     explicit QExeDOSStub(QObject *parent = nullptr);

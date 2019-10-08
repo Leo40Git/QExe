@@ -1,4 +1,4 @@
-#include "qexeoptheader.h"
+#include "qexeoptionalheader.h"
 
 #include <QBuffer>
 #include <QtEndian>
@@ -21,7 +21,7 @@
     }
 
 
-quint32 QExeOptHeader::size() const
+quint32 QExeOptionalHeader::size() const
 {
     quint32 dataDirCount = 0;
     if (!m_dataDirectories.isNull())
@@ -30,12 +30,12 @@ quint32 QExeOptHeader::size() const
     return 0x60 + dataDirCount * 8;
 }
 
-QSharedPointer<QList<QPair<quint32, quint32>>> QExeOptHeader::dataDirectories()
+QSharedPointer<QList<QPair<quint32, quint32>>> QExeOptionalHeader::dataDirectories()
 {
     return QSharedPointer<QList<QPair<quint32, quint32>>>(m_dataDirectories);
 }
 
-QExeOptHeader::QExeOptHeader(QObject *parent) : QObject(parent)
+QExeOptionalHeader::QExeOptionalHeader(QObject *parent) : QObject(parent)
 {
     linkerVerMajor = 2;
     linkerVerMinor = 0x38;
@@ -48,7 +48,7 @@ QExeOptHeader::QExeOptHeader(QObject *parent) : QObject(parent)
     m_dataDirectories = QSharedPointer<QList<QPair<quint32, quint32>>>(new QList<QPair<quint32, quint32>>());
 }
 
-bool QExeOptHeader::read(QByteArray src, QExeErrorInfo *errinfo) {
+bool QExeOptionalHeader::read(QByteArray src, QExeErrorInfo *errinfo) {
     QByteArray buf8(sizeof(quint8), 0);
     QByteArray buf16(sizeof(quint16), 0);
     QByteArray buf32(sizeof(quint32), 0);
@@ -125,9 +125,9 @@ bool QExeOptHeader::read(QByteArray src, QExeErrorInfo *errinfo) {
     return true;
 }
 
-QByteArray QExeOptHeader::toBytes()
+QByteArray QExeOptionalHeader::toBytes()
 {
-    QByteArray out(static_cast<int>(calculateSize()), 0);
+    QByteArray out(static_cast<int>(size()), 0);
 
     QByteArray buf8(sizeof(quint8), 0);
     QByteArray buf16(sizeof(quint16), 0);

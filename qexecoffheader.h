@@ -15,7 +15,7 @@ class QEXE_EXPORT QExeCOFFHeader : public QObject
     Q_OBJECT
     friend class QExe;
 public:
-    inline quint32 size() const;
+    quint32 size() const;
     // https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#machine-types
     enum MachineType : quint16 {
         Any = 0x0,

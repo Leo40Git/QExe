@@ -29,25 +29,25 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    QSharedPointer<QExeCOFFHeader> coffHead = exeDat.coffHead();
+    QSharedPointer<QExeCOFFHeader> coffHead = exeDat.coffHeader();
     OUT << "Printing COFF header properties";
     OUT << "Machine type: " << coffHead->machineType;
     OUT << "Timestamp: " << HEX(coffHead->timestamp);
     OUT << "Symbol table pointer: " << HEX(coffHead->symTblPtr);
     OUT << "Symbol table count: " << HEX(coffHead->symTblCount);
     OUT << "Characteristics: " << coffHead->characteristics;
-    QSharedPointer<QExeOptHeader> optHead = exeDat.optHead();
+    QSharedPointer<QExeOptionalHeader> optHead = exeDat.optionalHeader();
     OUT << "Printing optional header properties";
-    OUT << "Linker version: " << HEX(optHead->linkerVerMajor) << "/" << HEX(optHead->linkerVerMinor);
+    OUT << "Linker version: " << optHead->linkerVerMajor << "." << optHead->linkerVerMinor;
     OUT << "Address of entry point: " << HEX(optHead->entryPointAddr);
     OUT << "Base of code address: " << HEX(optHead->codeBaseAddr);
     OUT << "Base of data address: " << HEX(optHead->dataBaseAddr);
     OUT << "Image base: " << HEX(optHead->imageBase);
     OUT << "Section alignment: " << HEX(optHead->sectionAlign);
     OUT << "File alignment: " << HEX(optHead->fileAlign);
-    OUT << "Minumum OS version: " << HEX(optHead->minOSVerMajor) << "/" << HEX(optHead->minOSVerMinor);
-    OUT << "Image version: " << HEX(optHead->imageVerMajor) << "/" << HEX(optHead->imageVerMinor);
-    OUT << "Subsystem version: " << HEX(optHead->subsysVerMajor) << "/" << HEX(optHead->subsysVerMinor);
+    OUT << "Minumum OS version: " << optHead->minOSVerMajor << "." << optHead->minOSVerMinor;
+    OUT << "Image version: " << optHead->imageVerMajor << "." << optHead->imageVerMinor;
+    OUT << "Subsystem version: " << optHead->subsysVerMajor << "." << optHead->subsysVerMinor;
     OUT << "\"Win32VersionValue\" (reserved, must be 0): " << HEX(optHead->win32VerValue);
     OUT << "Checksum: " << HEX(optHead->checksum);
     OUT << "Subsystem: " << optHead->subsystem;
@@ -67,21 +67,27 @@ int main(int argc, char *argv[])
             OUT << "  RVA: " << HEX(dir.first) << ", size: " << HEX(dir.second);
         }
     }
+    QSharedPointer<QExeSectionManager> secMgr = exeDat.sectionManager();
+    OUT << "Printing sections (" << secMgr->sections.size() << " total)";
+    QSharedPointer<QExeSection> section;
+    foreach (section, secMgr->sections) {
+        OUT << "\"" << section->name() << "\"";
+        OUT << " Virtual size: " << HEX(section->virtualSize);
+        OUT << " Virtual address: " << HEX(section->virtualAddr);
+        OUT << " Raw data size: " << HEX(section->rawData.size());
+        OUT << " Relocations pointer: " << HEX(section->relocsPtr);
+        OUT << " Line-numbers poitner: " << HEX(section->linenumsPtr);
+        OUT << " Relocations count: " << HEX(section->relocsCount);
+        OUT << " Line-numbers count: " << HEX(section->linenumsCount);
+        OUT << " Characteristics: " << section->characteristics;
+    }
 
     QByteArray exeDatNew = exeDat.toBytes();
-    exeFile.seek(0);
-    QByteArray exeDatOld = exeFile.read(exeDatNew.size());
-    exeFile.close();
-    QFile outOld(testPath + "/out_old.header");
-    outOld.open(QFile::WriteOnly);
-    outOld.write(exeDatOld);
-    outOld.close();
-    OUT << "Wrote old header to \"" << outOld.fileName() << "\"";
-    QFile outNew(testPath + "/out_new.header");
+    QFile outNew(testPath + "/Doukutsu.out.exe");
     outNew.open(QFile::WriteOnly);
     outNew.write(exeDatNew);
     outNew.close();
-    OUT << "Wrote new header to \"" << outNew.fileName() << "\"";
+    OUT << "Wrote new EXE to \"" << outNew.fileName() << "\"";
 
     return 0;
 }

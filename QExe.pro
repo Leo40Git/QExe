@@ -20,7 +20,9 @@ SOURCES += \
     qexe.cpp \
     qexecoffheader.cpp \
     qexedosstub.cpp \
-    qexeoptheader.cpp
+    qexeoptionalheader.cpp \
+    qexesection.cpp \
+    qexesectionmanager.cpp
 
 HEADERS += \
     QExe_global.h \
@@ -28,7 +30,9 @@ HEADERS += \
     qexecoffheader.h \
     qexedosstub.h \
     qexeerrorinfo.h \
-    qexeoptheader.h
+    qexeoptionalheader.h \
+    qexesection.h \
+    qexesectionmanager.h
 
 # Default rules for deployment.
 unix {
