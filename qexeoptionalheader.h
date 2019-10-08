@@ -11,6 +11,9 @@
 class QExe;
 #endif
 
+typedef QPair<quint32, quint32> DataDirectory; // first => address, second => size
+typedef QSharedPointer<DataDirectory> DataDirectoryPtr;
+
 class QEXE_EXPORT QExeOptionalHeader : public QObject
 {
     Q_OBJECT
@@ -76,13 +79,32 @@ public:
     quint32 heapReserveSize;
     quint32 heapCommitSize;
     quint32 loaderFlags; // reserved, must be 0
-    QSharedPointer<QList<QPair<quint32, quint32>>> dataDirectories();
+    // https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#optional-header-data-directories-image-only
+    enum DataDirectories : int {
+        ExportTable = 0,
+        ImportTable,
+        ResourceTable,
+        ExceptionTable,
+        CertificateTable,
+        BaseRelocationTable,
+        DebugData,
+        Reserved_7, // both must be 0
+        GlobalPointer, // size must be 0
+        ThreadLocalStorageTable,
+        LoadConfigTable,
+        BoundImportTable,
+        ImportAddrTable,
+        DelayImportDescriptor,
+        CLRRuntimeHeader,
+        Reserved_15 // both must be 0
+    };
+    Q_ENUM(DataDirectories)
+    QList<DataDirectoryPtr> dataDirectories;
 #undef DECLARE_VERSION
 private:
     explicit QExeOptionalHeader(QObject *parent = nullptr);
     bool read(QByteArray src, QExeErrorInfo *errinfo);
     QByteArray toBytes();
-    QSharedPointer<QList<QPair<quint32, quint32>>> m_dataDirectories;
     // managed by QExe
     quint32 codeSize;
     quint32 initializedDataSize;

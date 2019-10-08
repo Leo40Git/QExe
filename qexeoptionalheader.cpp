@@ -23,16 +23,8 @@
 
 quint32 QExeOptionalHeader::size() const
 {
-    quint32 dataDirCount = 0;
-    if (!m_dataDirectories.isNull())
-        dataDirCount = static_cast<quint32>(m_dataDirectories->size());
-    // 0x1C (standard) + 0x44 (Windows specific) + dataDirCount * 8
-    return 0x60 + dataDirCount * 8;
-}
-
-QSharedPointer<QList<QPair<quint32, quint32>>> QExeOptionalHeader::dataDirectories()
-{
-    return QSharedPointer<QList<QPair<quint32, quint32>>>(m_dataDirectories);
+    // 0x1C (standard) + 0x44 (Windows specific) + dataDirectories.size() * 8
+    return 0x60 + static_cast<quint32>(dataDirectories.size()) * 8;
 }
 
 QExeOptionalHeader::QExeOptionalHeader(QObject *parent) : QObject(parent)
@@ -45,7 +37,6 @@ QExeOptionalHeader::QExeOptionalHeader(QObject *parent) : QObject(parent)
     stackCommitSize = 0x1000;
     heapReserveSize = 0x100000;
     heapCommitSize = 0x1000;
-    m_dataDirectories = QSharedPointer<QList<QPair<quint32, quint32>>>(new QList<QPair<quint32, quint32>>());
 }
 
 bool QExeOptionalHeader::read(QByteArray src, QExeErrorInfo *errinfo) {
@@ -114,12 +105,13 @@ bool QExeOptionalHeader::read(QByteArray src, QExeErrorInfo *errinfo) {
     buf.read(buf32.data(), sizeof(quint32));
     quint32 dirCount = qFromLittleEndian<quint32>(buf32.data());
     // Data directories
+    dataDirectories.clear();
     for (quint32 i = 0; i < dirCount; i++) {
         buf.read(buf32.data(), sizeof(quint32));
         quint32 rva = qFromLittleEndian<quint32>(buf32.data());
         buf.read(buf32.data(), sizeof(quint32));
         quint32 size = qFromLittleEndian<quint32>(buf32.data());
-        m_dataDirectories->append(QPair<quint32, quint32>(rva, size));
+        dataDirectories += DataDirectoryPtr(new DataDirectory(rva, size));
     }
     buf.close();
     return true;
@@ -184,22 +176,14 @@ QByteArray QExeOptionalHeader::toBytes()
     buf.write(buf32);
     qToLittleEndian<quint32>(loaderFlags, buf32.data());
     buf.write(buf32);
-    if (m_dataDirectories.isNull()) {
-        // this shouldn't be possible
-        // but regardless, pretend our list is empty
-        qToLittleEndian<quint32>(0, buf32.data());
-        buf.write(buf32);
-        buf.close();
-        return out;
-    }
-    qToLittleEndian<quint32>(static_cast<quint32>(m_dataDirectories->size()), buf32.data());
+    qToLittleEndian<quint32>(static_cast<quint32>(dataDirectories.size()), buf32.data());
     buf.write(buf32);
     // Data directories
-    QPair<quint32, quint32> pair;
-    foreach (pair, *m_dataDirectories) {
-        qToLittleEndian<quint32>(pair.first, buf32.data());
+    DataDirectoryPtr pair;
+    foreach (pair, dataDirectories) {
+        qToLittleEndian<quint32>(pair->first, buf32.data());
         buf.write(buf32);
-        qToLittleEndian<quint32>(pair.second, buf32.data());
+        qToLittleEndian<quint32>(pair->second, buf32.data());
         buf.write(buf32);
     }
     buf.close();

@@ -57,15 +57,13 @@ int main(int argc, char *argv[])
     OUT << "Heap reserve size: " << HEX(optHead->heapReserveSize);
     OUT << "Heap commit size: " << HEX(optHead->heapCommitSize);
     OUT << "\"LoaderFlags\" (reserved, must be 0): " << HEX(optHead->loaderFlags);
-    QSharedPointer<QList<QPair<quint32, quint32>>> dataDirectories = optHead->dataDirectories();
-    if (dataDirectories.isNull()) {
-        OUT << "Image data directories: null (0 total)";
-    } else {
-        OUT << "Image data directories: " << dataDirectories->size() << " total";
-        QPair<quint32, quint32> dir;
-        foreach (dir, *dataDirectories) {
-            OUT << "  RVA: " << HEX(dir.first) << ", size: " << HEX(dir.second);
-        }
+    int dirCount;
+    OUT << "Image data directories: " << (dirCount = optHead->dataDirectories.size()) << " total";
+    QMetaEnum dirMeta = QMetaEnum::fromType<QExeOptionalHeader::DataDirectories>();
+    DataDirectoryPtr dir;
+    for (int i = 0; i < dirCount; i++) {
+        dir = optHead->dataDirectories[i];
+        OUT << "  " << dirMeta.valueToKey(i) << " - Address: " << HEX(dir->first) << ", size: " << HEX(dir->second);
     }
     QSharedPointer<QExeSectionManager> secMgr = exeDat.sectionManager();
     OUT << "Printing sections (" << secMgr->sections.size() << " total)";

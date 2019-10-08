@@ -25,7 +25,7 @@ void QExeSectionManager::read(QIODevice &src, quint32 sectionCount)
     qint64 prev = 0;
 
     for (quint32 i = 0; i < sectionCount; i++) {
-        QSharedPointer<QExeSection> newSec = QSharedPointer<QExeSection>(new QExeSection(this));
+        QSharedPointer<QExeSection> newSec = QSharedPointer<QExeSection>(new QExeSection());
         newSec->nameBytes = src.read(8);
         src.read(buf32.data(), sizeof(quint32));
         newSec->virtualSize = qFromLittleEndian<quint32>(buf32.data());

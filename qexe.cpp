@@ -17,10 +17,10 @@ QExe::QExe(QObject *parent) : QObject(parent)
 
 void QExe::reset()
 {
-    m_dosStub = QSharedPointer<QExeDOSStub>(new QExeDOSStub(this));
-    m_coffHead = QSharedPointer<QExeCOFFHeader>(new QExeCOFFHeader(this));
-    m_optHead = QSharedPointer<QExeOptionalHeader>(new QExeOptionalHeader(this));
-    m_secMgr = QSharedPointer<QExeSectionManager>(new QExeSectionManager(this));
+    m_dosStub = QSharedPointer<QExeDOSStub>(new QExeDOSStub());
+    m_coffHead = QSharedPointer<QExeCOFFHeader>(new QExeCOFFHeader());
+    m_optHead = QSharedPointer<QExeOptionalHeader>(new QExeOptionalHeader());
+    m_secMgr = QSharedPointer<QExeSectionManager>(new QExeSectionManager());
 }
 
 #define SET_ERROR_INFO(errName) \
@@ -135,6 +135,11 @@ void QExe::updateComponents()
             m_optHead->codeBaseAddr = section->virtualAddr;
         else if (QString(".rdata").compare(section->name()) == 0)
             m_optHead->dataBaseAddr = section->virtualAddr;
+        else if (QString(".rsrc").compare(section->name()) == 0) {
+            DataDirectoryPtr rsrcDir = m_optHead->dataDirectories[QExeOptionalHeader::ResourceTable];
+            rsrcDir->first = section->virtualAddr;
+            rsrcDir->second = static_cast<quint32>(section->rawData.size());
+        }
         if (section->characteristics.testFlag(QExeSection::ContainsCode))
             m_optHead->codeSize += section->virtualSize;
         if (section->characteristics.testFlag(QExeSection::ContainsInitializedData))
