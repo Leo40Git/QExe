@@ -21,6 +21,15 @@
     }
 
 
+quint16 QExeOptHeader::calculateSize()
+{
+    quint16 dataDirCount = 0;
+    if (!m_dataDirectories.isNull())
+        dataDirCount = static_cast<quint16>(m_dataDirectories->size());
+    // 0x1C (standard) + 0x44 (Windows specific) + dataDirCount * 8
+    return 0x60 + dataDirCount * 8;
+}
+
 QSharedPointer<QList<QPair<quint32, quint32>>> QExeOptHeader::dataDirectories()
 {
     return QSharedPointer<QList<QPair<quint32, quint32>>>(m_dataDirectories);
@@ -118,7 +127,7 @@ bool QExeOptHeader::read(QByteArray src, QExeErrorInfo *errinfo) {
 
 QByteArray QExeOptHeader::toBytes()
 {
-    QByteArray out;
+    QByteArray out(static_cast<int>(calculateSize()), 0);
 
     QByteArray buf8(sizeof(quint8), 0);
     QByteArray buf16(sizeof(quint16), 0);
