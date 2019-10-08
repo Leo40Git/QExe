@@ -39,10 +39,16 @@ bool QExe::read(QIODevice &src, QExeErrorInfo *errinfo)
     // read DOS stub
     src.seek(0);
     m_dosStub->data = src.read(dosSz);
-    // read signature (should be "PE\0\0", AKA 0x50450000)
-    QLatin1String sig(src.read(4));
-    if (sig != "PE\0\0") {
-        SET_ERROR_INFO(BadPEFile_InvalidSignature)
+    // read signature (should be "PE\0\0")
+    QByteArray sig = src.read(4);
+    if (sig[0] != 'P' || sig[1] != 'E' || sig[2] != '\0' || sig[3] != '\0') { // curse you, null terminator
+        if (errinfo != nullptr) {
+            errinfo->errorID = QExeErrorInfo::BadPEFile_InvalidSignature;
+            errinfo->details += QChar(sig[0]);
+            errinfo->details += QChar(sig[1]);
+            errinfo->details += QChar(sig[2]);
+            errinfo->details += QChar(sig[3]);
+        }
         return false;
     }
     // read COFF header
@@ -71,9 +77,8 @@ QByteArray QExe::toBytes()
     // write "PE\0\0" signature
     QLatin1String sig("PE\0\0");
     dst.write(sig.data(), 4);
-    // convert optional header to bytes
+    // update header fields
     QByteArray optDat = m_optHead->toBytes();
-    // update COFF header's "optional header size" field
     m_coffHead->optHeadSize = static_cast<quint16>(optDat.size());
     // write COFF header
     dst.write(m_coffHead->toBytes());

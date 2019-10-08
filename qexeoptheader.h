@@ -2,6 +2,7 @@
 #define QEXEOPTHEADER_H
 
 #include <QObject>
+#include <QSharedPointer>
 
 #include "QExe_global.h"
 #include "qexeerrorinfo.h"
@@ -56,9 +57,6 @@ public:
 
 #define DECLARE_VERSION(name, size) quint ## size name ## VerMajor, name ## VerMinor;
     DECLARE_VERSION(linker, 8)
-    quint32 codeSize;
-    quint32 initializedDataSize;
-    quint32 uninitializedDataSize;
     quint32 entryPointAddr;
     quint32 codeBaseAddr;
     quint32 dataBaseAddr;
@@ -69,8 +67,6 @@ public:
     DECLARE_VERSION(image, 16)
     DECLARE_VERSION(subsys, 16)
     quint32 win32VerValue; // reserved, must be 0
-    quint32 imageSize;
-    quint32 headerSize;
     quint32 checksum;
     Subsystem subsystem;
     DLLCharacteristics dllCharacteristics;
@@ -79,12 +75,18 @@ public:
     quint32 heapReserveSize;
     quint32 heapCommitSize;
     quint32 loaderFlags; // reserved, must be 0
-    QList<QPair<quint32, quint32>> imageDataDirectories;
+    QSharedPointer<QList<QPair<quint32, quint32>>> imageDataDirectories;
 #undef DECLARE_VERSION
 private:
     explicit QExeOptHeader(QObject *parent = nullptr);
     bool read(QByteArray src, QExeErrorInfo *errinfo);
     QByteArray toBytes();
+    // managed by QExe
+    quint32 codeSize;
+    quint32 initializedDataSize;
+    quint32 uninitializedDataSize;
+    quint32 imageSize;
+    quint32 headerSize;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(QExeOptHeader::DLLCharacteristics)

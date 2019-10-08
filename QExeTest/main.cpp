@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     }
     exeFile.open(QFile::ReadOnly);
     QExeErrorInfo errinfo;
-    if (exeDat.read(exeFile, &errinfo)) {
+    if (!exeDat.read(exeFile, &errinfo)) {
         exeFile.close();
         OUT << "Error while reading EXE file \"" << exeFile.fileName() << "\":";
         OUT << "ID: " << errinfo.errorID;
@@ -39,12 +39,33 @@ int main(int argc, char *argv[])
     QExeOptHeader &optHead = exeDat.optHead();
     OUT << "Printing optional header properties";
     OUT << "Linker version: " << HEX(optHead.linkerVerMajor) << "/" << HEX(optHead.linkerVerMinor);
-    OUT << "Size of code: " << HEX(optHead.codeSize);
-    OUT << "Size of initialized data: " << HEX(optHead.initializedDataSize);
-    OUT << "Size of uninitialized data: " << HEX(optHead.uninitializedDataSize);
     OUT << "Address of entry point: " << HEX(optHead.entryPointAddr);
     OUT << "Base of code address: " << HEX(optHead.codeBaseAddr);
     OUT << "Base of data address: " << HEX(optHead.dataBaseAddr);
+    OUT << "Image base: " << HEX(optHead.imageBase);
+    OUT << "Section alignment: " << HEX(optHead.sectionAlign);
+    OUT << "File alignment: " << HEX(optHead.fileAlign);
+    OUT << "Minumum OS version: " << HEX(optHead.minOSVerMajor) << "/" << HEX(optHead.minOSVerMinor);
+    OUT << "Image version: " << HEX(optHead.imageVerMajor) << "/" << HEX(optHead.imageVerMinor);
+    OUT << "Subsystem version: " << HEX(optHead.subsysVerMajor) << "/" << HEX(optHead.subsysVerMinor);
+    OUT << "\"Win32VersionValue\" (reserved, must be 0): " << HEX(optHead.win32VerValue);
+    OUT << "Checksum: " << HEX(optHead.checksum);
+    OUT << "Subsystem: " << optHead.subsystem;
+    OUT << "DLL characteristics: " << optHead.dllCharacteristics;
+    OUT << "Stack reserve size: " << HEX(optHead.stackReserveSize);
+    OUT << "Stack commit size: " << HEX(optHead.stackCommitSize);
+    OUT << "Heap reserve size: " << HEX(optHead.heapReserveSize);
+    OUT << "Heap commit size: " << HEX(optHead.heapCommitSize);
+    OUT << "\"LoaderFlags\" (reserved, must be 0): " << HEX(optHead.loaderFlags);
+    if (optHead.imageDataDirectories.isNull()) {
+        OUT << "Image data directories: (null)";
+    } else {
+        OUT << "Image data directories: " << optHead.imageDataDirectories->size() << " total";
+        QPair<quint32, quint32> dir;
+        foreach (dir, *optHead.imageDataDirectories) {
+            OUT << "  RVA: " << HEX(dir.first) << ", size: " << HEX(dir.second);
+        }
+    }
 
     QByteArray exeDatNew = exeDat.toBytes();
     exeFile.seek(0);
@@ -54,10 +75,12 @@ int main(int argc, char *argv[])
     outOld.open(QFile::WriteOnly);
     outOld.write(exeDatOld);
     outOld.close();
+    OUT << "Wrote old header to \"" << outOld.fileName() << "\"";
     QFile outNew(testPath + "/out_new.header");
     outNew.open(QFile::WriteOnly);
     outNew.write(exeDatNew);
     outNew.close();
+    OUT << "Wrote new header to \"" << outNew.fileName() << "\"";
 
     return 0;
 }

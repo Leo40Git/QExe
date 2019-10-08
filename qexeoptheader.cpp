@@ -15,11 +15,9 @@
     qToLittleEndian<quint ## size>(name ## VerMinor, buf ## size.data()); \
     buf.write(buf ## size);
 
-#define SET_ERROR_INFO_INTERNAL(errName) \
-    errinfo->errorID = QExeErrorInfo::errName;
 #define SET_ERROR_INFO(errName) \
     if (errinfo != nullptr) { \
-        SET_ERROR_INFO_INTERNAL(errName) \
+        errinfo->errorID = QExeErrorInfo::errName; \
     }
 
 
@@ -33,6 +31,7 @@ QExeOptHeader::QExeOptHeader(QObject *parent) : QObject(parent)
     stackCommitSize = 0x1000;
     heapReserveSize = 0x100000;
     heapCommitSize = 0x1000;
+    imageDataDirectories = QSharedPointer<QList<QPair<quint32, quint32>>>(new QList<QPair<quint32, quint32>>());
 }
 
 bool QExeOptHeader::read(QByteArray src, QExeErrorInfo *errinfo) {
@@ -48,7 +47,7 @@ bool QExeOptHeader::read(QByteArray src, QExeErrorInfo *errinfo) {
     quint16 magic = qFromLittleEndian<quint16>(buf16.data());
     if (magic != 0x10B) {
         if (errinfo != nullptr) {
-            SET_ERROR_INFO_INTERNAL(BadPEFile_InvalidMagic)
+            errinfo->errorID = QExeErrorInfo::BadPEFile_InvalidMagic;
             errinfo->details += magic;
         }
         return false;
@@ -106,7 +105,7 @@ bool QExeOptHeader::read(QByteArray src, QExeErrorInfo *errinfo) {
         quint32 rva = qFromLittleEndian<quint32>(buf32.data());
         buf.read(buf32.data(), sizeof(quint32));
         quint32 size = qFromLittleEndian<quint32>(buf32.data());
-        imageDataDirectories += QPair<quint32, quint32>(rva, size);
+        *imageDataDirectories += QPair<quint32, quint32>(rva, size);
     }
     buf.close();
     return true;
@@ -171,11 +170,13 @@ QByteArray QExeOptHeader::toBytes()
     buf.write(buf32);
     qToLittleEndian<quint32>(loaderFlags, buf32.data());
     buf.write(buf32);
-    qToLittleEndian<quint32>(static_cast<quint32>(imageDataDirectories.size()), buf32.data());
+    if (imageDataDirectories.isNull())
+        imageDataDirectories = QSharedPointer<QList<QPair<quint32, quint32>>>(new QList<QPair<quint32, quint32>>());
+    qToLittleEndian<quint32>(static_cast<quint32>(imageDataDirectories->size()), buf32.data());
     buf.write(buf32);
     // Data directories
     QPair<quint32, quint32> pair;
-    foreach (pair, imageDataDirectories) {
+    foreach (pair, *imageDataDirectories) {
         qToLittleEndian<quint32>(pair.first, buf32.data());
         buf.write(buf32);
         qToLittleEndian<quint32>(pair.second, buf32.data());
