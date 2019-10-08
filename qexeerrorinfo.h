@@ -4,7 +4,9 @@
 #include <QObject>
 #include <QVariantList>
 
-class QExeErrorInfo : public QObject
+#include "QExe_global.h"
+
+class QEXE_EXPORT QExeErrorInfo : public QObject
 {
     Q_OBJECT
 public:

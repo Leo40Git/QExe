@@ -14,9 +14,10 @@ class QEXE_EXPORT QExeDOSStub : public QObject
 {
     Q_OBJECT
     friend class QExe;
+public:
+    QByteArray data;
 private:
     explicit QExeDOSStub(QObject *parent = nullptr);
-    QByteArray data;
 };
 
 #endif // QEXEDOSSTUB_H

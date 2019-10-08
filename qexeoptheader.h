@@ -53,10 +53,7 @@ public:
     };
     Q_DECLARE_FLAGS(DLLCharacteristics, DLLCharacteristic)
     Q_FLAG(DLLCharacteristics)
-private:
-    explicit QExeOptHeader(QObject *parent = nullptr);
-    bool read(QByteArray src, QExeErrorInfo *errinfo);
-    QByteArray toBytes();
+
 #define DECLARE_VERSION(name, size) quint ## size name ## VerMajor, name ## VerMinor;
     DECLARE_VERSION(linker, 8)
     quint32 codeSize;
@@ -84,6 +81,10 @@ private:
     quint32 loaderFlags; // reserved, must be 0
     QList<QPair<quint32, quint32>> imageDataDirectories;
 #undef DECLARE_VERSION
+private:
+    explicit QExeOptHeader(QObject *parent = nullptr);
+    bool read(QByteArray src, QExeErrorInfo *errinfo);
+    QByteArray toBytes();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(QExeOptHeader::DLLCharacteristics)

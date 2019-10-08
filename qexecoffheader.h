@@ -65,17 +65,19 @@ public:
     };
     Q_DECLARE_FLAGS(Characteristics, Characteristic)
     Q_FLAG(Characteristics)
+    MachineType machineType;
+    quint32 timestamp;
+    quint32 symTblPtr;
+    quint32 symTblCount;
+    Characteristics characteristics;
+
 private:
     explicit QExeCOFFHeader(QObject *parent = nullptr);
     bool read(QByteArray src, QExeErrorInfo *errinfo);
     QByteArray toBytes();
-    MachineType machineType;
+    // these two are managed by QExe
     quint16 sectionCount;
-    quint32 timestamp;
-    quint32 symTblPtr;
-    quint32 symTblCount;
     quint16 optHeadSize;
-    Characteristics characteristics;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(QExeCOFFHeader::Characteristics)

@@ -10,9 +10,9 @@ QExe::QExe(QObject *parent) : QObject(parent)
 
 void QExe::reset()
 {
-    dosStub = new QExeDOSStub(this);
-    coffHead = new QExeCOFFHeader(this);
-    optHead = new QExeOptHeader(this);
+    m_dosStub = new QExeDOSStub(this);
+    m_coffHead = new QExeCOFFHeader(this);
+    m_optHead = new QExeOptHeader(this);
 }
 
 #define SET_ERROR_INFO(errName) \
@@ -32,27 +32,26 @@ bool QExe::read(QIODevice &src, QExeErrorInfo *errinfo)
         return false;
     }
 
-    QByteArray buf32(sizeof(quint32), 0);
     // read DOS stub size
     src.seek(0x3C);
-    src.read(buf32.data(), sizeof(quint32));
-    qint64 dosSz = qFromLittleEndian<quint32>(buf32.data());
+    QByteArray dosSzBuf = src.read(sizeof(quint32));
+    qint64 dosSz = qFromLittleEndian<quint32>(dosSzBuf.data());
     // read DOS stub
     src.seek(0);
-    dosStub->data = src.read(dosSz);
+    m_dosStub->data = src.read(dosSz);
     // read signature (should be "PE\0\0", AKA 0x50450000)
-    src.read(buf32.data(), sizeof(quint32));
-    if (qFromLittleEndian<quint32>(buf32.data()) != 0x50450000) {
+    QLatin1String sig(src.read(4));
+    if (sig != "PE\0\0") {
         SET_ERROR_INFO(BadPEFile_InvalidSignature)
         return false;
     }
     // read COFF header
     QByteArray coffDat = src.read(0x14);
-    if (!coffHead->read(coffDat, errinfo))
+    if (!m_coffHead->read(coffDat, errinfo))
         return false;
     // read optional header
-    QByteArray optDat = src.read(coffHead->optHeadSize);
-    if (!optHead->read(optDat, errinfo))
+    QByteArray optDat = src.read(m_coffHead->optHeadSize);
+    if (!m_optHead->read(optDat, errinfo))
         return false;
 
     // TODO section headers (and sections)
@@ -68,16 +67,16 @@ QByteArray QExe::toBytes()
     dst.open(QBuffer::WriteOnly);
 
     // write DOS stub
-    dst.write(dosStub->data);
+    dst.write(m_dosStub->data);
     // write "PE\0\0" signature
-    qToBigEndian<quint32>(0x50450000, buf32.data()); // ???
-    dst.write(buf32);
+    QLatin1String sig("PE\0\0");
+    dst.write(sig.data(), 4);
     // convert optional header to bytes
-    QByteArray optDat = optHead->toBytes();
+    QByteArray optDat = m_optHead->toBytes();
     // update COFF header's "optional header size" field
-    coffHead->optHeadSize = static_cast<quint16>(optDat.size());
+    m_coffHead->optHeadSize = static_cast<quint16>(optDat.size());
     // write COFF header
-    dst.write(coffHead->toBytes());
+    dst.write(m_coffHead->toBytes());
     // write optional header
     dst.write(optDat);
 
@@ -85,4 +84,19 @@ QByteArray QExe::toBytes()
 
     dst.close();
     return out;
+}
+
+QExeDOSStub &QExe::dosStub()
+{
+    return *m_dosStub;
+}
+
+QExeCOFFHeader &QExe::coffHead()
+{
+    return *m_coffHead;
+}
+
+QExeOptHeader &QExe::optHead()
+{
+    return *m_optHead;
 }
