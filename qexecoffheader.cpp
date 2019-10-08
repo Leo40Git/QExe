@@ -8,6 +8,11 @@
         errinfo->errorID = QExeErrorInfo::errName; \
     }
 
+quint32 QExeCOFFHeader::size() const
+{
+    return 0x14;
+}
+
 QExeCOFFHeader::QExeCOFFHeader(QObject *parent) : QObject(parent)
 {
 }

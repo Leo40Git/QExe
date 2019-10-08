@@ -55,7 +55,7 @@ public:
     Q_DECLARE_FLAGS(DLLCharacteristics, DLLCharacteristic)
     Q_FLAG(DLLCharacteristics)
 
-    quint16 calculateSize();
+    inline quint32 size() const;
 #define DECLARE_VERSION(name, size) quint ## size name ## VerMajor, name ## VerMinor;
     DECLARE_VERSION(linker, 8)
     quint32 entryPointAddr;

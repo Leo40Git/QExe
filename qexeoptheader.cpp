@@ -21,11 +21,11 @@
     }
 
 
-quint16 QExeOptHeader::calculateSize()
+quint32 QExeOptHeader::size() const
 {
-    quint16 dataDirCount = 0;
+    quint32 dataDirCount = 0;
     if (!m_dataDirectories.isNull())
-        dataDirCount = static_cast<quint16>(m_dataDirectories->size());
+        dataDirCount = static_cast<quint32>(m_dataDirectories->size());
     // 0x1C (standard) + 0x44 (Windows specific) + dataDirCount * 8
     return 0x60 + dataDirCount * 8;
 }

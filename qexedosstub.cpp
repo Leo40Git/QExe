@@ -1,5 +1,10 @@
 #include "qexedosstub.h"
 
+quint32 QExeDOSStub::size() const
+{
+    return static_cast<quint32>(data.size());
+}
+
 QExeDOSStub::QExeDOSStub(QObject *parent) : QObject(parent)
 {
     data = QByteArray(0x40, 0);

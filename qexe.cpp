@@ -78,8 +78,8 @@ QByteArray QExe::toBytes()
     QLatin1String sig("PE\0\0");
     dst.write(sig.data(), 4);
     // update header fields
-    m_coffHead->optHeadSize = m_optHead->calculateSize();
-    // optHead.headerSize = DOSStubSize + 0x14 (COFFHeadSize) + OptHeadSize + SecHeadSize
+    m_coffHead->optHeadSize = static_cast<quint16>(m_optHead->size());
+    // m_optHead->headerSize = m_dosStub->size() + m_coffHead->size() + m_optHead->size() + m_secHead->size();
     // write COFF header
     dst.write(m_coffHead->toBytes());
     // write optional header
