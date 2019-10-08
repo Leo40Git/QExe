@@ -118,6 +118,17 @@ QSharedPointer<QExeSectionManager> QExe::sectionManager()
     return QSharedPointer<QExeSectionManager>(m_secMgr);
 }
 
+static QMap<QLatin1String, QExeOptionalHeader::DataDirectories> secName2DataDir {
+    { QLatin1String(".edata"), QExeOptionalHeader::ExportTable },
+    { QLatin1String(".idata"), QExeOptionalHeader::ImportTable },
+    { QLatin1String(".rsrc"), QExeOptionalHeader::ResourceTable },
+    { QLatin1String(".pdata"), QExeOptionalHeader::ExceptionTable },
+    { QLatin1String(".reloc"), QExeOptionalHeader::BaseRelocationTable },
+    { QLatin1String(".debug"), QExeOptionalHeader::DebugData },
+    { QLatin1String(".tls"), QExeOptionalHeader::ThreadLocalStorageTable },
+    { QLatin1String(".cormeta"), QExeOptionalHeader::CLRRuntimeHeader },
+};
+
 void QExe::updateComponents()
 {
     m_coffHead->optHeadSize = static_cast<quint16>(m_optHead->size());
@@ -131,15 +142,16 @@ void QExe::updateComponents()
         quint32 v = section->virtualAddr + section->virtualSize;
         if (v > m_optHead->imageSize)
             m_optHead->imageSize = v;
-        if (QString(".text").compare(section->name()) == 0)
-            m_optHead->codeBaseAddr = section->virtualAddr;
-        else if (QString(".rdata").compare(section->name()) == 0)
-            m_optHead->dataBaseAddr = section->virtualAddr;
-        else if (QString(".rsrc").compare(section->name()) == 0) {
-            DataDirectoryPtr rsrcDir = m_optHead->dataDirectories[QExeOptionalHeader::ResourceTable];
+        QLatin1String secName = section->name();
+        if (secName2DataDir.contains(secName)) {
+            DataDirectoryPtr rsrcDir = m_optHead->dataDirectories[secName2DataDir[secName]];
             rsrcDir->first = section->virtualAddr;
-            rsrcDir->second = static_cast<quint32>(section->rawData.size());
+            rsrcDir->second = section->virtualSize;
         }
+        else if (QString(".text").compare(secName) == 0)
+            m_optHead->codeBaseAddr = section->virtualAddr;
+        else if (QString(".rdata").compare(secName) == 0)
+            m_optHead->dataBaseAddr = section->virtualAddr;
         if (section->characteristics.testFlag(QExeSection::ContainsCode))
             m_optHead->codeSize += section->virtualSize;
         if (section->characteristics.testFlag(QExeSection::ContainsInitializedData))
