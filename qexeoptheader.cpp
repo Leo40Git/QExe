@@ -15,13 +15,11 @@
     qToLittleEndian<quint ## size>(name ## VerMinor, buf ## size.data()); \
     buf.write(buf ## size);
 
-using namespace ErrorInfo;
-#define SET_ERROR_INFO_INTERNAL(errName, subName) \
-    errinfo->errorID = errName; \
-    errinfo->subID = errName ## _ ## subName;
-#define SET_ERROR_INFO(errName, subName) \
+#define SET_ERROR_INFO_INTERNAL(errName) \
+    errinfo->errorID = QExeErrorInfo::errName;
+#define SET_ERROR_INFO(errName) \
     if (errinfo != nullptr) { \
-        SET_ERROR_INFO_INTERNAL(errName, subName) \
+        SET_ERROR_INFO_INTERNAL(errName) \
     }
 
 
@@ -37,7 +35,7 @@ QExeOptHeader::QExeOptHeader(QObject *parent) : QObject(parent)
     heapCommitSize = 0x1000;
 }
 
-bool QExeOptHeader::read(QByteArray src, ErrorInfoStruct *errinfo) {
+bool QExeOptHeader::read(QByteArray src, QExeErrorInfo *errinfo) {
     QByteArray buf8(sizeof(quint8), 0);
     QByteArray buf16(sizeof(quint16), 0);
     QByteArray buf32(sizeof(quint32), 0);
@@ -50,7 +48,7 @@ bool QExeOptHeader::read(QByteArray src, ErrorInfoStruct *errinfo) {
     quint16 magic = qFromLittleEndian<quint16>(buf16.data());
     if (magic != 0x10B) {
         if (errinfo != nullptr) {
-            SET_ERROR_INFO_INTERNAL(BadPEFile, InvalidMagic)
+            SET_ERROR_INFO_INTERNAL(BadPEFile_InvalidMagic)
             errinfo->details += magic;
         }
         return false;

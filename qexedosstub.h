@@ -4,7 +4,7 @@
 #include <QObject>
 
 #include "QExe_global.h"
-#include "errorinfo.h"
+#include "qexeerrorinfo.h"
 
 #ifndef QEXE_H
 class QExe;

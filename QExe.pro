@@ -24,10 +24,10 @@ SOURCES += \
 
 HEADERS += \
     QExe_global.h \
-    errorinfo.h \
     qexe.h \
     qexecoffheader.h \
     qexedosstub.h \
+    qexeerrorinfo.h \
     qexeoptheader.h
 
 # Default rules for deployment.

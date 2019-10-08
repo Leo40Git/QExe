@@ -4,7 +4,7 @@
 #include <QObject>
 
 #include "QExe_global.h"
-#include "errorinfo.h"
+#include "qexeerrorinfo.h"
 
 #ifndef QEXE_H
 class QExe;
@@ -55,7 +55,7 @@ public:
     Q_FLAG(DLLCharacteristics)
 private:
     explicit QExeOptHeader(QObject *parent = nullptr);
-    bool read(QByteArray src, ErrorInfo::ErrorInfoStruct *errinfo);
+    bool read(QByteArray src, QExeErrorInfo *errinfo);
     QByteArray toBytes();
 #define DECLARE_VERSION(name, size) quint ## size name ## VerMajor, name ## VerMinor;
     DECLARE_VERSION(linker, 8)

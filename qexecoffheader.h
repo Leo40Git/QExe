@@ -4,7 +4,7 @@
 #include <QObject>
 
 #include "QExe_global.h"
-#include "errorinfo.h"
+#include "qexeerrorinfo.h"
 
 #ifndef QEXE_H
 class QExe;
@@ -67,7 +67,7 @@ public:
     Q_FLAG(Characteristics)
 private:
     explicit QExeCOFFHeader(QObject *parent = nullptr);
-    bool read(QByteArray src, ErrorInfo::ErrorInfoStruct *errinfo);
+    bool read(QByteArray src, QExeErrorInfo *errinfo);
     QByteArray toBytes();
     MachineType machineType;
     quint16 sectionCount;

@@ -13,11 +13,11 @@ int main(int argc, char *argv[])
     QString dataPath("C:/QExeTest");
     QFile exeFile(dataPath + "/Doukutsu.exe");
     exeFile.open(QFile::ReadOnly);
-    ErrorInfo::ErrorInfoStruct errinfo;
+    QExeErrorInfo errinfo;
     if (exeDat.read(exeFile, &errinfo)) {
         exeFile.close();
         qDebug().noquote().nospace() << "Error while reading EXE file \"" << dataPath << "/" << exeFile.fileName() << "\":" << endl;
-        //qDebug().noquote().nospace() << errinfo.subID << endl;
+        qDebug().noquote().nospace() << errinfo.errorID << endl;
         qDebug().noquote().nospace() << errinfo.details << endl;
         return 0;
     }

@@ -3,11 +3,9 @@
 #include <QBuffer>
 #include <QtEndian>
 
-using namespace ErrorInfo;
-#define SET_ERROR_INFO(errName, subName) \
+#define SET_ERROR_INFO(errName) \
     if (errinfo != nullptr) { \
-        errinfo->errorID = errName; \
-        errinfo->subID = errName ## _ ## subName; \
+        errinfo->errorID = QExeErrorInfo::errName; \
     }
 
 QExeCOFFHeader::QExeCOFFHeader(QObject *parent) : QObject(parent)
@@ -15,7 +13,7 @@ QExeCOFFHeader::QExeCOFFHeader(QObject *parent) : QObject(parent)
     machineType = I386;
 }
 
-bool QExeCOFFHeader::read(QByteArray src, ErrorInfo::ErrorInfoStruct *errinfo)
+bool QExeCOFFHeader::read(QByteArray src, QExeErrorInfo *errinfo)
 {
     QByteArray buf16(sizeof(quint16), 0);
     QByteArray buf32(sizeof(quint32), 0);
@@ -27,7 +25,7 @@ bool QExeCOFFHeader::read(QByteArray src, ErrorInfo::ErrorInfoStruct *errinfo)
     sectionCount = qFromLittleEndian<quint16>(buf16.data());
     // "Note that the Windows loader limits the number of sections to 96." (https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#coff-file-header-object-and-image)
     if (sectionCount > 96) {
-        SET_ERROR_INFO(BadPEFile, InvalidSectionCount)
+        SET_ERROR_INFO(BadPEFile_InvalidSectionCount)
         errinfo->details += sectionCount;
         return false;
     }

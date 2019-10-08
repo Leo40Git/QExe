@@ -15,22 +15,20 @@ void QExe::reset()
     optHead = new QExeOptHeader(this);
 }
 
-using namespace ErrorInfo;
-#define SET_ERROR_INFO(errName, subName) \
+#define SET_ERROR_INFO(errName) \
     if (errinfo != nullptr) { \
-        errinfo->errorID = errName; \
-        errinfo->subID = errName ## _ ## subName; \
+        errinfo->errorID = QExeErrorInfo::errName; \
     }
 
-bool QExe::read(QIODevice &src, ErrorInfoStruct *errinfo)
+bool QExe::read(QIODevice &src, QExeErrorInfo *errinfo)
 {
     // make sure src is usable
     if (!src.isReadable()) {
-        SET_ERROR_INFO(BadIODevice, Unreadable)
+        SET_ERROR_INFO(BadIODevice_Unreadable)
         return false;
     }
     if (src.isSequential()) {
-        SET_ERROR_INFO(BadIODevice, Sequential)
+        SET_ERROR_INFO(BadIODevice_Sequential)
         return false;
     }
 
@@ -45,7 +43,7 @@ bool QExe::read(QIODevice &src, ErrorInfoStruct *errinfo)
     // read signature (should be "PE\0\0", AKA 0x50450000)
     src.read(buf32.data(), sizeof(quint32));
     if (qFromLittleEndian<quint32>(buf32.data()) != 0x50450000) {
-        SET_ERROR_INFO(BadPEFile, InvalidSignature)
+        SET_ERROR_INFO(BadPEFile_InvalidSignature)
         return false;
     }
     // read COFF header

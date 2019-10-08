@@ -5,7 +5,7 @@
 #include <QIODevice>
 
 #include "QExe_global.h"
-#include "errorinfo.h"
+#include "qexeerrorinfo.h"
 #include "qexedosstub.h"
 #include "qexecoffheader.h"
 #include "qexeoptheader.h"
@@ -16,7 +16,7 @@ class QEXE_EXPORT QExe : QObject
 public:
     explicit QExe(QObject *parent = nullptr);
     void reset();
-    bool read(QIODevice &src, ErrorInfo::ErrorInfoStruct *error = nullptr);
+    bool read(QIODevice &src, QExeErrorInfo *error = nullptr);
     QByteArray toBytes();
 private:
     QExeDOSStub *dosStub;
