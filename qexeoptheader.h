@@ -75,12 +75,13 @@ public:
     quint32 heapReserveSize;
     quint32 heapCommitSize;
     quint32 loaderFlags; // reserved, must be 0
-    QSharedPointer<QList<QPair<quint32, quint32>>> imageDataDirectories;
+    QSharedPointer<QList<QPair<quint32, quint32>>> dataDirectories();
 #undef DECLARE_VERSION
 private:
     explicit QExeOptHeader(QObject *parent = nullptr);
     bool read(QByteArray src, QExeErrorInfo *errinfo);
     QByteArray toBytes();
+    QSharedPointer<QList<QPair<quint32, quint32>>> m_dataDirectories;
     // managed by QExe
     quint32 codeSize;
     quint32 initializedDataSize;

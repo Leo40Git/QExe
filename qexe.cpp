@@ -10,9 +10,9 @@ QExe::QExe(QObject *parent) : QObject(parent)
 
 void QExe::reset()
 {
-    m_dosStub = new QExeDOSStub(this);
-    m_coffHead = new QExeCOFFHeader(this);
-    m_optHead = new QExeOptHeader(this);
+    m_dosStub = QSharedPointer<QExeDOSStub>(new QExeDOSStub(this));
+    m_coffHead = QSharedPointer<QExeCOFFHeader>(new QExeCOFFHeader(this));
+    m_optHead = QSharedPointer<QExeOptHeader>(new QExeOptHeader(this));
 }
 
 #define SET_ERROR_INFO(errName) \
@@ -91,17 +91,17 @@ QByteArray QExe::toBytes()
     return out;
 }
 
-QExeDOSStub &QExe::dosStub()
+QSharedPointer<QExeDOSStub> QExe::dosStub()
 {
-    return *m_dosStub;
+    return QSharedPointer<QExeDOSStub>(m_dosStub);
 }
 
-QExeCOFFHeader &QExe::coffHead()
+QSharedPointer<QExeCOFFHeader> QExe::coffHead()
 {
-    return *m_coffHead;
+    return QSharedPointer<QExeCOFFHeader>(m_coffHead);
 }
 
-QExeOptHeader &QExe::optHead()
+QSharedPointer<QExeOptHeader> QExe::optHead()
 {
-    return *m_optHead;
+    return QSharedPointer<QExeOptHeader>(m_optHead);
 }

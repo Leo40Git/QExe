@@ -18,13 +18,13 @@ public:
     void reset();
     bool read(QIODevice &src, QExeErrorInfo *error = nullptr);
     QByteArray toBytes();
-    QExeDOSStub &dosStub();
-    QExeCOFFHeader &coffHead();
-    QExeOptHeader &optHead();
+    QSharedPointer<QExeDOSStub> dosStub();
+    QSharedPointer<QExeCOFFHeader> coffHead();
+    QSharedPointer<QExeOptHeader> optHead();
 private:
-    QExeDOSStub *m_dosStub;
-    QExeCOFFHeader *m_coffHead;
-    QExeOptHeader *m_optHead;
+    QSharedPointer<QExeDOSStub> m_dosStub;
+    QSharedPointer<QExeCOFFHeader> m_coffHead;
+    QSharedPointer<QExeOptHeader> m_optHead;
 };
 
 #endif // QEXE_H
