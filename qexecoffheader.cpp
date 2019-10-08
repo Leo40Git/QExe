@@ -10,7 +10,6 @@
 
 QExeCOFFHeader::QExeCOFFHeader(QObject *parent) : QObject(parent)
 {
-    machineType = I386;
 }
 
 bool QExeCOFFHeader::read(QByteArray src, QExeErrorInfo *errinfo)
