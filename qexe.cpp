@@ -11,8 +11,8 @@ QExe::QExe(QObject *parent) : QObject(parent)
 void QExe::reset()
 {
     dosStub = new QExeDOSStub(this);
-    coffHeader = new QExeCOFFHeader(this);
-    optHeader = new QExeOptHeader(this);
+    coffHead = new QExeCOFFHeader(this);
+    optHead = new QExeOptHeader(this);
 }
 
 using namespace ErrorInfo;
@@ -50,11 +50,11 @@ bool QExe::read(QIODevice &src, ErrorInfoStruct *errinfo)
     }
     // read COFF header
     QByteArray coffDat = src.read(0x14);
-    if (!coffHeader->read(coffDat, errinfo))
+    if (!coffHead->read(coffDat, errinfo))
         return false;
     // read optional header
-    QByteArray optDat = src.read(coffHeader->optHeadSize);
-    if (!optHeader->read(optDat, errinfo))
+    QByteArray optDat = src.read(coffHead->optHeadSize);
+    if (!optHead->read(optDat, errinfo))
         return false;
 
     // TODO section headers (and sections)
@@ -62,7 +62,7 @@ bool QExe::read(QIODevice &src, ErrorInfoStruct *errinfo)
     return true;
 }
 
-QByteArray QExe::write()
+QByteArray QExe::toBytes()
 {
     QByteArray buf32(sizeof(quint32), 0);
     QByteArray out;
@@ -72,14 +72,14 @@ QByteArray QExe::write()
     // write DOS stub
     dst.write(dosStub->data);
     // write "PE\0\0" signature
-    qToLittleEndian<quint32>(0x50450000, buf32.data());
+    qToBigEndian<quint32>(0x50450000, buf32.data()); // ???
     dst.write(buf32);
     // convert optional header to bytes
-    QByteArray optDat = optHeader->toBytes();
+    QByteArray optDat = optHead->toBytes();
     // update COFF header's "optional header size" field
-    coffHeader->optHeadSize = static_cast<quint16>(optDat.size());
+    coffHead->optHeadSize = static_cast<quint16>(optDat.size());
     // write COFF header
-    dst.write(coffHeader->toBytes());
+    dst.write(coffHead->toBytes());
     // write optional header
     dst.write(optDat);
 

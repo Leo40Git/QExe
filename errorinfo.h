@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QVariantList>
 
+#include "QExe_global.h"
+
 namespace ErrorInfo {
     Q_NAMESPACE
 
@@ -11,20 +13,19 @@ namespace ErrorInfo {
         BadIODevice = 0,
         BadPEFile
     };
-    Q_ENUM_NS(ErrorID);
+
+    Q_ENUM_NS(ErrorID)
 
     enum SubErrorID {
-        // Success
-        Success_NoErrors = 0,
         // BadIODevice
-        BadIODevice_Unreadable = 0,
+        BadIODevice_Unreadable = BadIODevice * 0x100,
         BadIODevice_Sequential,
         // BadPEFile
-        BadPEFile_InvalidSignature = 0,
+        BadPEFile_InvalidSignature = BadPEFile * 0x100,
         BadPEFile_InvalidSectionCount,
         BadPEFile_InvalidMagic,
     };
-    Q_ENUM_NS(SubErrorID);
+    Q_ENUM_NS(SubErrorID)
 
     struct ErrorInfoStruct {
         ErrorID errorID;

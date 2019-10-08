@@ -16,12 +16,12 @@ class QEXE_EXPORT QExe : QObject
 public:
     explicit QExe(QObject *parent = nullptr);
     void reset();
-    bool read(QIODevice &src, ErrorInfo::ErrorInfoStruct *error);
-    QByteArray write();
+    bool read(QIODevice &src, ErrorInfo::ErrorInfoStruct *error = nullptr);
+    QByteArray toBytes();
 private:
     QExeDOSStub *dosStub;
-    QExeCOFFHeader *coffHeader;
-    QExeOptHeader *optHeader;
+    QExeCOFFHeader *coffHead;
+    QExeOptHeader *optHead;
 };
 
 #endif // QEXE_H
