@@ -15,6 +15,7 @@ class QEXE_EXPORT QExe : QObject
 {
     Q_OBJECT
     friend class QExeDOSStub;
+	friend class QExeCOFFHeader;
     friend class QExeOptionalHeader;
     friend class QExeSectionManager;
 public:
