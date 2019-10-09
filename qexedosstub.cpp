@@ -5,8 +5,10 @@ quint32 QExeDOSStub::size() const
     return static_cast<quint32>(data.size());
 }
 
-QExeDOSStub::QExeDOSStub(QObject *parent) : QObject(parent)
+QExeDOSStub::QExeDOSStub(QExe *exeDat, QObject *parent) : QObject(parent)
 {
+    m_exeDat = exeDat;
+
     data = QByteArray(0x40, 0);
     // generate a minimal (but functioning) DOS stub header
     data[0] = 0x4D;

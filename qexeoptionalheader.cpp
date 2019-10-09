@@ -27,8 +27,10 @@ quint32 QExeOptionalHeader::size() const
     return 0x60 + static_cast<quint32>(dataDirectories.size()) * 8;
 }
 
-QExeOptionalHeader::QExeOptionalHeader(QObject *parent) : QObject(parent)
+QExeOptionalHeader::QExeOptionalHeader(QExe *exeDat, QObject *parent) : QObject(parent)
 {
+    m_exeDat = exeDat;
+
     linkerVerMajor = 2;
     linkerVerMinor = 0x38;
     subsysVerMajor = 4;

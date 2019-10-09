@@ -10,13 +10,12 @@ inline quint32 QExeSectionManager::headerSize()
     return static_cast<quint32>(sections.size()) * 0x28;
 }
 
-QExeSectionManager::QExeSectionManager(QObject *parent) : QObject(parent)
+QExeSectionManager::QExeSectionManager(QExe *exeDat, QObject *parent) : QObject(parent)
 {
+    m_exeDat = exeDat;
 }
 
-
-
-void QExeSectionManager::read(QIODevice &src, quint32 sectionCount)
+void QExeSectionManager::read(QIODevice &src)
 {
     sections.clear();
 
@@ -24,6 +23,7 @@ void QExeSectionManager::read(QIODevice &src, quint32 sectionCount)
     QByteArray buf32(sizeof(quint32), 0);
     qint64 prev = 0;
 
+    quint32 sectionCount = m_exeDat->coffHeader()->sectionCount;
     for (quint32 i = 0; i < sectionCount; i++) {
         QSharedPointer<QExeSection> newSec = QSharedPointer<QExeSection>(new QExeSection());
         newSec->nameBytes = src.read(8);
@@ -35,6 +35,7 @@ void QExeSectionManager::read(QIODevice &src, quint32 sectionCount)
         quint32 rawDataSize = qFromLittleEndian<quint32>(buf32.data());
         src.read(buf32.data(), sizeof(quint32));
         quint32 rawDataPtr = qFromLittleEndian<quint32>(buf32.data());
+        newSec->linearize = newSec->virtualAddr == rawDataPtr;
         prev = src.pos();
         src.seek(rawDataPtr);
         newSec->rawData = src.read(rawDataSize);
@@ -53,13 +54,18 @@ void QExeSectionManager::read(QIODevice &src, quint32 sectionCount)
     }
 }
 
-void QExeSectionManager::write(QIODevice &dst, quint32 fileAlign)
+void QExeSectionManager::write(QIODevice &dst)
 {
+    quint32 fileAlign = m_exeDat->optionalHeader()->fileAlign;
     // set out section data in physical space
     quint32 currentPos = QExe::alignForward(static_cast<quint32>(dst.pos()) + headerSize(), fileAlign);
     QVector<quint32> rawDataPtrs;
     QSharedPointer<QExeSection> section;
     foreach (section, sections) {
+        if (section->linearize) {
+            if (currentPos < section->virtualAddr)
+                currentPos = section->virtualAddr;
+        }
         rawDataPtrs += currentPos;
         currentPos += static_cast<quint32>(section->rawData.size());
         currentPos = QExe::alignForward(currentPos, fileAlign);
@@ -95,4 +101,11 @@ void QExeSectionManager::write(QIODevice &dst, quint32 fileAlign)
         dst.seek(rawDataPtrs[i]);
         dst.write(section->rawData);
     }
+}
+
+// TODO
+bool QExeSectionManager::test(QExeErrorInfo *errinfo)
+{
+    (void)errinfo;
+    return true;
 }

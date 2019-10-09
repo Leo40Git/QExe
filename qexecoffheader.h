@@ -6,14 +6,18 @@
 #include "QExe_global.h"
 #include "qexeerrorinfo.h"
 
-#ifndef QEXE_H
 class QExe;
-#endif
+class QExeDOSStub;
+class QExeOptionalHeader;
+class QExeSectionManager;
 
 class QEXE_EXPORT QExeCOFFHeader : public QObject
 {
     Q_OBJECT
     friend class QExe;
+    friend class QExeDOSStub;
+    friend class QExeOptionalHeader;
+    friend class QExeSectionManager;
 public:
     quint32 size() const;
     // https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#machine-types
@@ -73,7 +77,8 @@ public:
     Characteristics characteristics;
 
 private:
-    explicit QExeCOFFHeader(QObject *parent = nullptr);
+    explicit QExeCOFFHeader(QExe *exeDat, QObject *parent = nullptr);
+    QExe *m_exeDat;
     bool read(QByteArray src, QExeErrorInfo *errinfo);
     QByteArray toBytes();
     // managed by QExe

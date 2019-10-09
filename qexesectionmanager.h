@@ -22,9 +22,11 @@ public:
     inline quint32 headerSize();
     QVector<QSharedPointer<QExeSection>> sections;
 private:
-    explicit QExeSectionManager(QObject *parent = nullptr);
-    void read(QIODevice &src, quint32 sectionCount);
-    void write(QIODevice &dst, quint32 fileAlign);
+    explicit QExeSectionManager(QExe *exeDat, QObject *parent = nullptr);
+    QExe *m_exeDat;
+    void read(QIODevice &src);
+    void write(QIODevice &dst);
+    bool test(QExeErrorInfo *errinfo);
 };
 
 #endif // QEXESECTIONMANAGER_H

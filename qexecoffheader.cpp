@@ -13,8 +13,11 @@ quint32 QExeCOFFHeader::size() const
     return 0x14;
 }
 
-QExeCOFFHeader::QExeCOFFHeader(QObject *parent) : QObject(parent)
+QExeCOFFHeader::QExeCOFFHeader(QExe *exeDat, QObject *parent) : QObject(parent)
 {
+    m_exeDat = exeDat;
+
+    machineType = I386;
 }
 
 bool QExeCOFFHeader::read(QByteArray src, QExeErrorInfo *errinfo)

@@ -57,6 +57,7 @@ public:
     };
     Q_DECLARE_FLAGS(Characteristics, Characteristic)
     Q_FLAG(Characteristics)
+    bool linearize;
     QLatin1String name() const;
     void setName(const QLatin1String &name);
     quint32 virtualSize;

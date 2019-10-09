@@ -7,9 +7,10 @@
 #include "QExe_global.h"
 #include "qexeerrorinfo.h"
 
-#ifndef QEXE_H
 class QExe;
-#endif
+class QExeDOSStub;
+class QExeCOFFHeader;
+class QExeSectionManager;
 
 typedef QPair<quint32, quint32> DataDirectory; // first => address, second => size
 typedef QSharedPointer<DataDirectory> DataDirectoryPtr;
@@ -18,6 +19,9 @@ class QEXE_EXPORT QExeOptionalHeader : public QObject
 {
     Q_OBJECT
     friend class QExe;
+    friend class QExeDOSStub;
+    friend class QExeCOFFHeader;
+    friend class QExeSectionManager;
 public:
     // https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#windows-subsystem
     enum Subsystem : quint16 {
@@ -102,7 +106,8 @@ public:
     QList<DataDirectoryPtr> dataDirectories;
 #undef DECLARE_VERSION
 private:
-    explicit QExeOptionalHeader(QObject *parent = nullptr);
+    explicit QExeOptionalHeader(QExe *exeDat, QObject *parent = nullptr);
+    QExe *m_exeDat;
     bool read(QByteArray src, QExeErrorInfo *errinfo);
     QByteArray toBytes();
     // managed by QExe

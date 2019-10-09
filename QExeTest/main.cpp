@@ -80,8 +80,14 @@ int main(int argc, char *argv[])
         OUT << " Characteristics: " << section->characteristics;
     }
 
-    QByteArray exeDatNew = exeDat.toBytes();
     QFile outNew(testPath + "/Doukutsu.out.exe");
+    QByteArray exeDatNew;
+    if (!exeDat.toBytes(exeDatNew, &errinfo)) {
+        OUT << "Error while writing EXE file \"" << outNew.fileName() << "\":";
+        OUT << "ID: " << errinfo.errorID;
+        OUT << "Details: " << errinfo.details;
+        return 1;
+    }
     outNew.open(QFile::WriteOnly);
     outNew.write(exeDatNew);
     outNew.close();

@@ -3,13 +3,6 @@
 #include <QtEndian>
 #include <QBuffer>
 
-quint32 QExe::alignForward(quint32 val, quint32 align) {
-    quint32 mod = val & align;
-    if (mod != 0)
-        val += align - mod;
-    return val;
-}
-
 QExe::QExe(QObject *parent) : QObject(parent)
 {
     reset();
@@ -17,10 +10,10 @@ QExe::QExe(QObject *parent) : QObject(parent)
 
 void QExe::reset()
 {
-    m_dosStub = QSharedPointer<QExeDOSStub>(new QExeDOSStub());
-    m_coffHead = QSharedPointer<QExeCOFFHeader>(new QExeCOFFHeader());
-    m_optHead = QSharedPointer<QExeOptionalHeader>(new QExeOptionalHeader());
-    m_secMgr = QSharedPointer<QExeSectionManager>(new QExeSectionManager());
+    m_dosStub = QSharedPointer<QExeDOSStub>(new QExeDOSStub(this));
+    m_coffHead = QSharedPointer<QExeCOFFHeader>(new QExeCOFFHeader(this));
+    m_optHead = QSharedPointer<QExeOptionalHeader>(new QExeOptionalHeader(this));
+    m_secMgr = QSharedPointer<QExeSectionManager>(new QExeSectionManager(this));
 }
 
 #define SET_ERROR_INFO(errName) \
@@ -68,34 +61,35 @@ bool QExe::read(QIODevice &src, QExeErrorInfo *errinfo)
     if (!m_optHead->read(optDat, errinfo))
         return false;
     // section manager taking over to read sections
-    m_secMgr->read(src, m_coffHead->sectionCount);
+    m_secMgr->read(src);
 
     return true;
 }
 
-QByteArray QExe::toBytes()
+bool QExe::toBytes(QByteArray &dst, QExeErrorInfo *errinfo)
 {
-    updateComponents();
+    if (!updateComponents(errinfo))
+        return false;
 
     QByteArray buf32(sizeof(quint32), 0);
-    QByteArray out;
-    QBuffer dst(&out);
-    dst.open(QBuffer::WriteOnly);
+    dst = QByteArray();
+    QBuffer buf(&dst);
+    buf.open(QBuffer::WriteOnly);
 
     // write DOS stub
-    dst.write(m_dosStub->data);
+    buf.write(m_dosStub->data);
     // write "PE\0\0" signature
     QLatin1String sig("PE\0\0");
-    dst.write(sig.data(), 4);
+    buf.write(sig.data(), 4);
     // write COFF header
-    dst.write(m_coffHead->toBytes());
+    buf.write(m_coffHead->toBytes());
     // write optional header
-    dst.write(m_optHead->toBytes());
+    buf.write(m_optHead->toBytes());
     // section manager taking over to write sections
-    m_secMgr->write(dst, m_optHead->fileAlign);
+    m_secMgr->write(buf);
 
-    dst.close();
-    return out;
+    buf.close();
+    return true;
 }
 
 QSharedPointer<QExeDOSStub> QExe::dosStub()
@@ -129,8 +123,10 @@ static QMap<QLatin1String, QExeOptionalHeader::DataDirectories> secName2DataDir 
     { QLatin1String(".cormeta"), QExeOptionalHeader::CLRRuntimeHeader },
 };
 
-void QExe::updateComponents()
+bool QExe::updateComponents(QExeErrorInfo *errinfo)
 {
+    if (!m_secMgr->test(errinfo))
+        return false;
     m_coffHead->optHeadSize = static_cast<quint16>(m_optHead->size());
     m_optHead->headerSize = m_dosStub->size() + m_coffHead->size() + m_optHead->size();
     m_optHead->codeSize = 0;
@@ -147,8 +143,7 @@ void QExe::updateComponents()
             DataDirectoryPtr rsrcDir = m_optHead->dataDirectories[secName2DataDir[secName]];
             rsrcDir->first = section->virtualAddr;
             rsrcDir->second = section->virtualSize;
-        }
-        else if (QString(".text").compare(secName) == 0)
+        } else if (QString(".text").compare(secName) == 0)
             m_optHead->codeBaseAddr = section->virtualAddr;
         else if (QString(".rdata").compare(secName) == 0)
             m_optHead->dataBaseAddr = section->virtualAddr;
@@ -160,4 +155,5 @@ void QExe::updateComponents()
             m_optHead->uninitializedDataSize += section->virtualSize;
     }
     m_optHead->imageSize = alignForward(m_optHead->imageSize, m_optHead->sectionAlign);
+    return true;
 }
