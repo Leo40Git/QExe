@@ -19,11 +19,11 @@ class QEXE_EXPORT QExeSectionManager : public QObject
     Q_OBJECT
     friend class QExe;
 public:
-    inline quint32 headerSize();
+    quint32 headerSize();
     QVector<QSharedPointer<QExeSection>> sections;
 private:
     explicit QExeSectionManager(QExe *exeDat, QObject *parent = nullptr);
-    QExe *m_exeDat;
+    QExe *exeDat;
     void read(QIODevice &src);
     void write(QIODevice &dst);
     bool test(QExeErrorInfo *errinfo);

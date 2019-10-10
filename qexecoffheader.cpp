@@ -15,7 +15,7 @@ quint32 QExeCOFFHeader::size() const
 
 QExeCOFFHeader::QExeCOFFHeader(QExe *exeDat, QObject *parent) : QObject(parent)
 {
-    m_exeDat = exeDat;
+    this->exeDat = exeDat;
 
     machineType = I386;
 }

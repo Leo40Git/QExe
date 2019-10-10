@@ -29,7 +29,7 @@ quint32 QExeOptionalHeader::size() const
 
 QExeOptionalHeader::QExeOptionalHeader(QExe *exeDat, QObject *parent) : QObject(parent)
 {
-    m_exeDat = exeDat;
+    this->exeDat = exeDat;
 
     linkerVerMajor = 2;
     linkerVerMinor = 0x38;

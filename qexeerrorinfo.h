@@ -19,6 +19,9 @@ public:
         BadPEFile_InvalidSignature = 1 * 0x100,
         BadPEFile_InvalidSectionCount,
         BadPEFile_InvalidMagic,
+        // BadSection
+        BadSection_VirtualOverlap = 2 * 0x100,
+        BadSection_LinearizeFailure,
     };
     Q_ENUM(ErrorID)
     ErrorID errorID;

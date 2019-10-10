@@ -107,7 +107,7 @@ public:
 #undef DECLARE_VERSION
 private:
     explicit QExeOptionalHeader(QExe *exeDat, QObject *parent = nullptr);
-    QExe *m_exeDat;
+    QExe *exeDat;
     bool read(QByteArray src, QExeErrorInfo *errinfo);
     QByteArray toBytes();
     // managed by QExe

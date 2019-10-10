@@ -87,6 +87,8 @@ bool QExe::toBytes(QByteArray &dst, QExeErrorInfo *errinfo)
     buf.write(m_optHead->toBytes());
     // section manager taking over to write sections
     m_secMgr->write(buf);
+    // pad to file align
+    buf.seek(alignForward(buf.pos(), static_cast<qint64>(m_optHead->fileAlign)));
 
     buf.close();
     return true;
@@ -125,10 +127,10 @@ static QMap<QLatin1String, QExeOptionalHeader::DataDirectories> secName2DataDir 
 
 bool QExe::updateComponents(QExeErrorInfo *errinfo)
 {
+    m_coffHead->optHeadSize = static_cast<quint16>(m_optHead->size());
+    m_optHead->headerSize = alignForward(m_dosStub->size() + m_coffHead->size() + m_optHead->size() + m_secMgr->headerSize(), m_optHead->fileAlign);
     if (!m_secMgr->test(errinfo))
         return false;
-    m_coffHead->optHeadSize = static_cast<quint16>(m_optHead->size());
-    m_optHead->headerSize = m_dosStub->size() + m_coffHead->size() + m_optHead->size();
     m_optHead->codeSize = 0;
     m_optHead->initializedDataSize = 0;
     m_optHead->uninitializedDataSize = 0;
@@ -140,9 +142,12 @@ bool QExe::updateComponents(QExeErrorInfo *errinfo)
             m_optHead->imageSize = v;
         QLatin1String secName = section->name();
         if (secName2DataDir.contains(secName)) {
-            DataDirectoryPtr rsrcDir = m_optHead->dataDirectories[secName2DataDir[secName]];
-            rsrcDir->first = section->virtualAddr;
-            rsrcDir->second = section->virtualSize;
+            int dirID = secName2DataDir[secName];
+            if (dirID < m_optHead->dataDirectories.size()) {
+                DataDirectoryPtr rsrcDir = m_optHead->dataDirectories[dirID];
+                rsrcDir->first = section->virtualAddr;
+                rsrcDir->second = section->virtualSize;
+            }
         } else if (QString(".text").compare(secName) == 0)
             m_optHead->codeBaseAddr = section->virtualAddr;
         else if (QString(".rdata").compare(secName) == 0)

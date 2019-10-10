@@ -71,6 +71,7 @@ public:
 private:
     explicit QExeSection(QObject *parent = nullptr);
     QByteArray nameBytes;
+    quint32 rawDataPtr;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(QExeSection::Characteristics)
