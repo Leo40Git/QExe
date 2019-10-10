@@ -159,6 +159,9 @@ bool QExe::updateComponents(QExeErrorInfo *errinfo)
         if (section->characteristics.testFlag(QExeSection::ContainsUninitializedData))
             m_optHead->uninitializedDataSize += section->virtualSize;
     }
+    m_optHead->codeSize = alignForward(m_optHead->codeSize, m_optHead->sectionAlign);
+    m_optHead->initializedDataSize = alignForward(m_optHead->initializedDataSize, m_optHead->sectionAlign);
+    m_optHead->uninitializedDataSize = alignForward(m_optHead->uninitializedDataSize, m_optHead->sectionAlign);
     m_optHead->imageSize = alignForward(m_optHead->imageSize, m_optHead->sectionAlign);
     return true;
 }
