@@ -12,6 +12,8 @@ class QExeDOSStub;
 class QExeCOFFHeader;
 class QExeSectionManager;
 
+typedef QPair<quint8, quint8> Version8;
+typedef QPair<quint16, quint16> Version16;
 typedef QPair<quint32, quint32> DataDirectory; // first => address, second => size
 typedef QSharedPointer<DataDirectory> DataDirectoryPtr;
 
@@ -63,17 +65,16 @@ public:
     Q_FLAG(DLLCharacteristics)
 
     quint32 size() const;
-#define DECLARE_VERSION(name, size) quint ## size name ## VerMajor, name ## VerMinor;
-    DECLARE_VERSION(linker, 8)
+    Version8 linkerVer;
     quint32 entryPointAddr;
     quint32 codeBaseAddr;
     quint32 dataBaseAddr;
     quint32 imageBase;
     quint32 sectionAlign;
     quint32 fileAlign;
-    DECLARE_VERSION(minOS, 16)
-    DECLARE_VERSION(image, 16)
-    DECLARE_VERSION(subsys, 16)
+    Version16 minOSVer;
+    Version16 imageVer;
+    Version16 subsysVer;
     quint32 win32VerValue; // reserved, must be 0
     quint32 checksum;
     Subsystem subsystem;

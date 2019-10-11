@@ -5,14 +5,14 @@
 
 #define READ_VERSION(name, size) \
     buf.read(buf ## size.data(), sizeof(quint ## size)); \
-    name ## VerMajor = qFromLittleEndian<quint ## size>(buf ## size.data()); \
+    name ## Ver.first = qFromLittleEndian<quint ## size>(buf ## size.data()); \
     buf.read(buf ## size.data(), sizeof(quint ## size)); \
-    name ## VerMinor = qFromLittleEndian<quint ## size>(buf ## size.data());
+    name ## Ver.second = qFromLittleEndian<quint ## size>(buf ## size.data());
 
 #define WRITE_VERSION(name, size) \
-    qToLittleEndian<quint ## size>(name ## VerMajor, buf ## size.data()); \
+    qToLittleEndian<quint ## size>(name ## Ver.first, buf ## size.data()); \
     buf.write(buf ## size); \
-    qToLittleEndian<quint ## size>(name ## VerMinor, buf ## size.data()); \
+    qToLittleEndian<quint ## size>(name ## Ver.second, buf ## size.data()); \
     buf.write(buf ## size);
 
 #define SET_ERROR_INFO(errName) \
@@ -31,9 +31,9 @@ QExeOptionalHeader::QExeOptionalHeader(QExe *exeDat, QObject *parent) : QObject(
 {
     this->exeDat = exeDat;
 
-    linkerVerMajor = 2;
-    linkerVerMinor = 0x38;
-    subsysVerMajor = 4;
+    linkerVer.first = 2;
+    linkerVer.second = 0x38;
+    subsysVer.first = 4;
     subsystem = WinCUI;
     stackReserveSize = 0x200000;
     stackCommitSize = 0x1000;
