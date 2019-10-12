@@ -66,9 +66,11 @@ int main(int argc, char *argv[])
         OUT << "  " << dirMeta.valueToKey(i) << " - Address: " << HEX(dir->first) << ", size: " << HEX(dir->second);
     }
     QSharedPointer<QExeSectionManager> secMgr = exeDat.sectionManager();
-    OUT << "Printing sections (" << secMgr->sections.size() << " total)";
-    QSharedPointer<QExeSection> section;
-    foreach (section, secMgr->sections) {
+    int secCount;
+    OUT << "Printing sections (" << (secCount = secMgr->sectionCount()) << " total)";
+    QExeSectionPtr section;
+    for (int i = 0; i < secCount; i++) {
+        section = secMgr->sectionAt(i);
         OUT << "\"" << section->name() << "\"";
         OUT << " Virtual size: " << HEX(section->virtualSize);
         OUT << " Virtual address: " << HEX(section->virtualAddr);

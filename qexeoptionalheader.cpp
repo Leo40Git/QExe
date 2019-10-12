@@ -33,7 +33,8 @@ QExeOptionalHeader::QExeOptionalHeader(QExe *exeDat, QObject *parent) : QObject(
 
     linkerVer.first = 2;
     linkerVer.second = 0x38;
-    subsysVer.first = 4;
+    minOSVer = OSVersion_Win95;
+    subsysVer = OSVersion_Win95;
     subsystem = WinCUI;
     stackReserveSize = 0x200000;
     stackCommitSize = 0x1000;

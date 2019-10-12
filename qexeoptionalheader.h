@@ -63,6 +63,31 @@ public:
     };
     Q_DECLARE_FLAGS(DLLCharacteristics, DLLCharacteristic)
     Q_FLAG(DLLCharacteristics)
+    // https://www.gaijin.at/en/infos/windows-version-numbers
+    // these can be used for both minOSVer and subsysVer
+    const Version16 OSVersion_Win10 = Version16(10, 0);
+    const Version16 OSVersion_WinServer19 = OSVersion_Win10;
+    const Version16 OSVersion_WinServer16 = OSVersion_Win10;
+    const Version16 OSVersion_Win81 = Version16(6, 3);
+    const Version16 OSVersion_WinServer12R2 = OSVersion_Win81;
+    const Version16 OSVersion_Win8 = Version16(6, 2);
+    const Version16 OSVersion_WinServer12 = OSVersion_Win8;
+    const Version16 OSVersion_Win7 = Version16(6, 1);
+    const Version16 OSVersion_WinServer08R2 = OSVersion_Win7;
+    const Version16 OSVersion_WinVista = Version16(6, 0);
+    const Version16 OSVersion_WinServer08 = OSVersion_WinVista;
+    const Version16 OSVersion_WinXP64 = Version16(5, 2);
+    const Version16 OSVersion_WinServer03R2 = OSVersion_WinXP64;
+    const Version16 OSVersion_WinServer03 = OSVersion_WinXP64;
+    const Version16 OSVersion_WinXP = Version16(5, 1);
+    const Version16 OSVersion_Win2K = Version16(5, 0);
+    const Version16 OSVersion_WinNT4 = Version16(4, 0);
+    const Version16 OSVersion_WinNT351 = Version16(3, 51);
+    const Version16 OSVersion_WinNT35 = Version16(3, 50);
+    const Version16 OSVersion_Win31 = Version16(3, 10);
+    const Version16 OSVersion_WinME = Version16(4, 90);
+    const Version16 OSVersion_Win98 = Version16(4, 10);
+    const Version16 OSVersion_Win95 = OSVersion_WinNT4;
 
     quint32 size() const;
     Version8 linkerVer;

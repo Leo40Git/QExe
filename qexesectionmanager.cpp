@@ -6,9 +6,66 @@
 
 #include "qexe.h"
 
+#define SET_ERROR_INFO(errName) \
+    if (errinfo != nullptr) { \
+        errinfo->errorID = QExeErrorInfo::errName; \
+    }
+
 quint32 QExeSectionManager::headerSize()
 {
     return static_cast<quint32>(sections.size()) * 0x28;
+}
+
+int QExeSectionManager::sectionCount()
+{
+    return sections.size();
+}
+
+QExeSectionPtr QExeSectionManager::sectionAt(int index)
+{
+    if (index < 0 || index >= sections.size())
+        return nullptr;
+    return sections[index];
+}
+
+int QExeSectionManager::sectionIndexByName(const QLatin1String &name)
+{
+    for (int i = 0; i < sections.size(); i++) {
+        if (sections[i]->name() == name)
+            return i;
+    }
+    return -1;
+}
+
+QExeSectionPtr QExeSectionManager::sectionWithName(const QLatin1String &name)
+{
+    return sectionAt(sectionIndexByName(name));
+}
+
+bool QExeSectionManager::addSection(QExeSectionPtr newSec, QExeErrorInfo *errinfo)
+{
+    // TODO
+    return false;
+}
+
+QExeSectionPtr QExeSectionManager::removeSection(int index)
+{
+    if (index < 0 || index >= sections.size())
+        return nullptr;
+    QExeSectionPtr sec = sections[index];
+    sections.removeAt(index);
+    return sec;
+}
+
+QExeSectionPtr QExeSectionManager::removeSection(const QLatin1String &name)
+{
+    return removeSection(sectionIndexByName(name));
+}
+
+QExeSectionPtr QExeSectionManager::createSection(const QLatin1String &name, quint32 size)
+{
+    // TODO
+    return nullptr;
 }
 
 QExeSectionManager::QExeSectionManager(QExe *exeDat, QObject *parent) : QObject(parent)
@@ -26,7 +83,7 @@ void QExeSectionManager::read(QIODevice &src)
 
     quint32 sectionCount = exeDat->coffHeader()->sectionCount;
     for (quint32 i = 0; i < sectionCount; i++) {
-        QSharedPointer<QExeSection> newSec = QSharedPointer<QExeSection>(new QExeSection());
+        QExeSectionPtr newSec = QExeSectionPtr(new QExeSection());
         newSec->nameBytes = src.read(8);
         src.read(buf32.data(), sizeof(quint32));
         newSec->virtualSize = qFromLittleEndian<quint32>(buf32.data());
@@ -57,7 +114,7 @@ void QExeSectionManager::read(QIODevice &src)
 
 void QExeSectionManager::write(QIODevice &dst)
 {
-    QSharedPointer<QExeSection> section;
+    QExeSectionPtr section;
     // write section headers
     QByteArray buf16(sizeof(quint16), 0);
     QByteArray buf32(sizeof(quint32), 0);
@@ -133,7 +190,7 @@ void deleteAllocs(AllocMap &map) {
 
 bool QExeSectionManager::test(QExeErrorInfo *errinfo)
 {
-    QSharedPointer<QExeSection> section;
+    QExeSectionPtr section;
     // -- Test virtual integrity
     std::sort(sections.begin(), sections.end(), sectionVALessThan);
     // set minimum usable RVA
