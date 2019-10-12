@@ -86,7 +86,8 @@ public:
     const Version16 OSVersion_WinNT35 = Version16(3, 50);
     const Version16 OSVersion_Win31 = Version16(3, 10);
     const Version16 OSVersion_WinME = Version16(4, 90);
-    const Version16 OSVersion_Win98 = Version16(4, 10);
+    const Version16 OSVersion_Win98SE = Version16(4, 10);
+    const Version16 OSVersion_Win98 = OSVersion_Win98SE;
     const Version16 OSVersion_Win95 = OSVersion_WinNT4;
 
     quint32 size() const;
