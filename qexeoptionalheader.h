@@ -8,7 +8,6 @@
 #include "qexeerrorinfo.h"
 
 class QExe;
-class QExeDOSStub;
 class QExeCOFFHeader;
 class QExeSectionManager;
 
@@ -21,7 +20,6 @@ class QEXE_EXPORT QExeOptionalHeader : public QObject
 {
     Q_OBJECT
     friend class QExe;
-    friend class QExeDOSStub;
     friend class QExeCOFFHeader;
     friend class QExeSectionManager;
 public:

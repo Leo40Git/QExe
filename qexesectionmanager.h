@@ -15,8 +15,6 @@ class QExeDOSStub;
 class QExeCOFFHeader;
 class QExeOptionalHeader;
 
-typedef QSharedPointer<QExeSection> QExeSectionPtr;
-
 class QEXE_EXPORT QExeSectionManager : public QObject
 {
     Q_OBJECT
@@ -30,7 +28,7 @@ public:
     QExeSectionPtr sectionAt(int index);
     int sectionIndexByName(const QLatin1String &name);
     QExeSectionPtr sectionWithName(const QLatin1String &name);
-    bool addSection(QExeSectionPtr newSec, QExeErrorInfo *errinfo = nullptr);
+    bool addSection(QExeSectionPtr newSec);
     QExeSectionPtr removeSection(int index);
     QExeSectionPtr removeSection(const QLatin1String &name);
     QExeSectionPtr createSection(const QLatin1String &name, quint32 size);
@@ -40,7 +38,9 @@ private:
     QVector<QExeSectionPtr> sections;
     void read(QIODevice &src);
     void write(QIODevice &dst);
-    bool test(QExeErrorInfo *errinfo);
+    bool test(bool justOrderAndOverlap, QExeErrorInfo *errinfo);
+    void positionSection(QExeSectionPtr newSec, quint32 i, quint32 sectionAlign);
+    int rsrcSectionIndex();
 };
 
 #endif // QEXESECTIONMANAGER_H

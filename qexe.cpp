@@ -96,28 +96,34 @@ bool QExe::toBytes(QByteArray &dst, QExeErrorInfo *errinfo)
 
 QSharedPointer<QExeDOSStub> QExe::dosStub()
 {
-    return QSharedPointer<QExeDOSStub>(m_dosStub);
+    return m_dosStub;
 }
 
 QSharedPointer<QExeCOFFHeader> QExe::coffHeader()
 {
-    return QSharedPointer<QExeCOFFHeader>(m_coffHead);
+    return m_coffHead;
 }
 
 QSharedPointer<QExeOptionalHeader> QExe::optionalHeader()
 {
-    return QSharedPointer<QExeOptionalHeader>(m_optHead);
+    return m_optHead;
 }
 
 QSharedPointer<QExeSectionManager> QExe::sectionManager()
 {
-    return QSharedPointer<QExeSectionManager>(m_secMgr);
+    return m_secMgr;
+}
+
+void QExe::updateHeaderSizes()
+{
+    m_coffHead->optHeadSize = static_cast<quint16>(m_optHead->size());
+    m_optHead->headerSize = m_dosStub->size() + m_coffHead->size() + m_optHead->size() + m_secMgr->headerSize();
+    m_optHead->headerSize = alignForward(m_optHead->headerSize, m_optHead->fileAlign);
 }
 
 static QMap<QLatin1String, QExeOptionalHeader::DataDirectories> secName2DataDir {
     { QLatin1String(".edata"), QExeOptionalHeader::ExportTable },
     { QLatin1String(".idata"), QExeOptionalHeader::ImportTable },
-    { QLatin1String(".rsrc"), QExeOptionalHeader::ResourceTable },
     { QLatin1String(".pdata"), QExeOptionalHeader::ExceptionTable },
     { QLatin1String(".reloc"), QExeOptionalHeader::BaseRelocationTable },
     { QLatin1String(".debug"), QExeOptionalHeader::DebugData },
@@ -127,15 +133,13 @@ static QMap<QLatin1String, QExeOptionalHeader::DataDirectories> secName2DataDir 
 
 bool QExe::updateComponents(QExeErrorInfo *errinfo)
 {
-    m_coffHead->optHeadSize = static_cast<quint16>(m_optHead->size());
-    m_optHead->headerSize = alignForward(m_dosStub->size() + m_coffHead->size() + m_optHead->size() + m_secMgr->headerSize(), m_optHead->fileAlign);
-    if (!m_secMgr->test(errinfo))
+    if (!m_secMgr->test(false, errinfo))
         return false;
     m_optHead->codeSize = 0;
     m_optHead->initializedDataSize = 0;
     m_optHead->uninitializedDataSize = 0;
     m_optHead->imageSize = 0;
-    QSharedPointer<QExeSection> section;
+    QExeSectionPtr section;
     foreach (section, m_secMgr->sections) {
         quint32 v = section->virtualAddr + section->virtualSize;
         if (v > m_optHead->imageSize)

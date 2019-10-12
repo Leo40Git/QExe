@@ -8,6 +8,8 @@
 class QExeSectionManager;
 #endif
 
+#include <QSharedPointer>
+
 class QEXE_EXPORT QExeSection : public QObject
 {
     Q_OBJECT
@@ -70,10 +72,13 @@ public:
     Characteristics characteristics;
 private:
     explicit QExeSection(QObject *parent = nullptr);
+    explicit QExeSection(const QLatin1String &name, quint32 size, QObject *parent = nullptr);
     QByteArray nameBytes;
     quint32 rawDataPtr;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(QExeSection::Characteristics)
+
+typedef QSharedPointer<QExeSection> QExeSectionPtr;
 
 #endif // QEXESECTION_H

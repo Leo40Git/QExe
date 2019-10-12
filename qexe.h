@@ -35,6 +35,7 @@ public:
     QSharedPointer<QExeOptionalHeader> optionalHeader();
     QSharedPointer<QExeSectionManager> sectionManager();
 private:
+    void updateHeaderSizes();
     bool updateComponents(QExeErrorInfo *error);
     QSharedPointer<QExeDOSStub> m_dosStub;
     QSharedPointer<QExeCOFFHeader> m_coffHead;

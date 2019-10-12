@@ -7,17 +7,11 @@
 #include "qexeerrorinfo.h"
 
 class QExe;
-class QExeCOFFHeader;
-class QExeOptionalHeader;
-class QExeSectionManager;
 
 class QEXE_EXPORT QExeDOSStub : public QObject
 {
     Q_OBJECT
     friend class QExe;
-    friend class QExeCOFFHeader;
-    friend class QExeOptionalHeader;
-    friend class QExeSectionManager;
 public:
     quint32 size() const;
     QByteArray data;

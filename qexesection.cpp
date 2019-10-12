@@ -14,3 +14,10 @@ void QExeSection::setName(const QLatin1String &name)
 QExeSection::QExeSection(QObject *parent) : QObject(parent)
 {
 }
+
+QExeSection::QExeSection(const QLatin1String &name, quint32 size, QObject *parent) : QObject(parent)
+{
+    setName(name);
+    virtualSize = size;
+    rawData.resize(static_cast<int>(size));
+}

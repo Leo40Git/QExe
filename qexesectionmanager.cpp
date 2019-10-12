@@ -42,10 +42,21 @@ QExeSectionPtr QExeSectionManager::sectionWithName(const QLatin1String &name)
     return sectionAt(sectionIndexByName(name));
 }
 
-bool QExeSectionManager::addSection(QExeSectionPtr newSec, QExeErrorInfo *errinfo)
+bool QExeSectionManager::addSection(QExeSectionPtr newSec)
 {
-    // TODO
-    return false;
+    if (newSec.isNull())
+        return false;
+    QExeSectionPtr section;
+    foreach (section, sections) {
+        if (section->name() == newSec->name())
+            return false;
+    }
+    quint32 sectionAlign = exeDat->optionalHeader()->sectionAlign;
+    sections += newSec;
+    exeDat->updateHeaderSizes();
+    quint32 headerSize = exeDat->optionalHeader()->headerSize;
+    positionSection(newSec, headerSize, sectionAlign);
+    return true;
 }
 
 QExeSectionPtr QExeSectionManager::removeSection(int index)
@@ -64,8 +75,22 @@ QExeSectionPtr QExeSectionManager::removeSection(const QLatin1String &name)
 
 QExeSectionPtr QExeSectionManager::createSection(const QLatin1String &name, quint32 size)
 {
-    // TODO
-    return nullptr;
+    QExeSectionPtr newSec = QExeSectionPtr(new QExeSection(name, size));
+    if (!addSection(newSec))
+        return nullptr;
+    return newSec;
+}
+
+int QExeSectionManager::rsrcSectionIndex()
+{
+    QList<DataDirectoryPtr> dataDirs = exeDat->optionalHeader()->dataDirectories;
+    if (dataDirs.size() <= QExeOptionalHeader::ResourceTable)
+        return -1;
+    quint32 rsrcVA = dataDirs[QExeOptionalHeader::ResourceTable]->first;
+    for (int i = 0; i < sections.size(); i++)
+        if (sections[i]->virtualAddr == rsrcVA)
+            return i;
+    return -1;
 }
 
 QExeSectionManager::QExeSectionManager(QExe *exeDat, QObject *parent) : QObject(parent)
@@ -170,13 +195,14 @@ public:
 
 typedef QLinkedList<AllocSpan*> AllocMap;
 
-bool checkAlloc(AllocMap &map, AllocSpan *span) {
+bool checkAlloc(AllocMap &map, AllocSpan *span, bool add = true) {
     AllocSpan *chk;
     foreach (chk, map) {
         if (chk->collides(span))
             return false;
     }
-    map += span;
+    if (add)
+        map += span;
     return true;
 }
 
@@ -188,7 +214,7 @@ void deleteAllocs(AllocMap &map) {
     map.clear();
 }
 
-bool QExeSectionManager::test(QExeErrorInfo *errinfo)
+bool QExeSectionManager::test(bool justOrderAndOverlap, QExeErrorInfo *errinfo)
 {
     QExeSectionPtr section;
     // -- Test virtual integrity
@@ -205,6 +231,8 @@ bool QExeSectionManager::test(QExeErrorInfo *errinfo)
         }
         rvaHeaderFloor = section->virtualAddr + section->virtualSize;
     }
+    if (justOrderAndOverlap)
+        return true;
     // -- Allocate file addresses
     quint32 fileAlign = exeDat->optionalHeader()->fileAlign;
     AllocMap map;
@@ -238,4 +266,31 @@ bool QExeSectionManager::test(QExeErrorInfo *errinfo)
     }
     deleteAllocs(map);
     return true;
+}
+
+void QExeSectionManager::positionSection(QExeSectionPtr newSec, quint32 i, quint32 sectionAlign)
+{
+    AllocMap map;
+    // disallow collision with primary header
+    map += new AllocSpan(0, exeDat->optionalHeader()->headerSize);
+    // add other sections
+    QExeSectionPtr section;
+    foreach (section, sections) {
+        if (section->name() == newSec->name())
+            continue;
+        map += new AllocSpan(section->virtualAddr, QExe::alignForward(section->virtualSize, sectionAlign));
+    }
+    AllocSpan *as = new AllocSpan(0, QExe::alignForward(newSec->virtualSize, sectionAlign));
+    while (true) {
+        i = QExe::alignForward(i, sectionAlign);
+        // is this OK?
+        as->start = i;
+        bool hit = checkAlloc(map, as, false);
+        if (!hit) {
+            newSec->virtualAddr = i;
+            deleteAllocs(map);
+            return;
+        }
+        i += sectionAlign;
+    }
 }
