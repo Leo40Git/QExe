@@ -13,6 +13,7 @@ void QExeSection::setName(const QLatin1String &name)
 
 QExeSection::QExeSection(QObject *parent) : QObject(parent)
 {
+    linearize = false;
 }
 
 QExeSection::QExeSection(const QLatin1String &name, quint32 size, QObject *parent) : QObject(parent)

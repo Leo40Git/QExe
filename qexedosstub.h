@@ -11,11 +11,13 @@ class QExe;
 class QEXE_EXPORT QExeDOSStub : public QObject
 {
     Q_OBJECT
-    friend class QExe;
+
 public:
     quint32 size() const;
     QByteArray data;
 private:
+    friend class QExe;
+
     explicit QExeDOSStub(QExe *exeDat, QObject *parent = nullptr);
     QExe *m_exeDat;
 };

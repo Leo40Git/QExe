@@ -10,14 +10,11 @@
 #include "qexecoffheader.h"
 #include "qexeoptionalheader.h"
 #include "qexesectionmanager.h"
+#include "qexersrcmanager.h"
 
 class QEXE_EXPORT QExe : QObject
 {
     Q_OBJECT
-    friend class QExeDOSStub;
-	friend class QExeCOFFHeader;
-    friend class QExeOptionalHeader;
-    friend class QExeSectionManager;
 public:
     template<typename V>
     static V alignForward(V val, V align) {
@@ -28,19 +25,31 @@ public:
     }
     explicit QExe(QObject *parent = nullptr);
     void reset();
-    bool read(QIODevice &src, QExeErrorInfo *error = nullptr);
-    bool toBytes(QByteArray &dst, QExeErrorInfo *error = nullptr);
+    bool read(QIODevice &src, QExeErrorInfo *errinfo = nullptr);
+    bool toBytes(QByteArray &dst, QExeErrorInfo *errinfo = nullptr);
     QSharedPointer<QExeDOSStub> dosStub();
     QSharedPointer<QExeCOFFHeader> coffHeader();
     QSharedPointer<QExeOptionalHeader> optionalHeader();
     QSharedPointer<QExeSectionManager> sectionManager();
+    QSharedPointer<QExeRsrcManager> rsrcManager();
+    QSharedPointer<QExeRsrcManager> createRsrcManager(QExeErrorInfo *errinfo = nullptr);
+    bool autoCreateRsrcManager() const;
+    void setAutoCreateRsrcManager(bool autoCreateRsrcManager);
+
 private:
+    friend class QExeCOFFHeader;
+    friend class QExeOptionalHeader;
+    friend class QExeSectionManager;
+    friend class QExeRsrcManager;
+
     void updateHeaderSizes();
     bool updateComponents(QExeErrorInfo *error);
+    bool m_autoCreateRsrcManager;
     QSharedPointer<QExeDOSStub> m_dosStub;
     QSharedPointer<QExeCOFFHeader> m_coffHead;
     QSharedPointer<QExeOptionalHeader> m_optHead;
     QSharedPointer<QExeSectionManager> m_secMgr;
+    QSharedPointer<QExeRsrcManager> m_rsrcMgr;
 };
 
 #endif // QEXE_H

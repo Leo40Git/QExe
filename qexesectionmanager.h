@@ -18,10 +18,6 @@ class QExeOptionalHeader;
 class QEXE_EXPORT QExeSectionManager : public QObject
 {
     Q_OBJECT
-    friend class QExe;
-    friend class QExeDOSStub;
-    friend class QExeCOFFHeader;
-    friend class QExeOptionalHeader;
 public:
     quint32 headerSize();
     int sectionCount();
@@ -33,6 +29,11 @@ public:
     QExeSectionPtr removeSection(const QLatin1String &name);
     QExeSectionPtr createSection(const QLatin1String &name, quint32 size);
 private:
+    friend class QExe;
+    friend class QExeDOSStub;
+    friend class QExeCOFFHeader;
+    friend class QExeOptionalHeader;
+
     explicit QExeSectionManager(QExe *exeDat, QObject *parent = nullptr);
     QExe *exeDat;
     QVector<QExeSectionPtr> sections;

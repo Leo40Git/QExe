@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    /*
     QSharedPointer<QExeCOFFHeader> coffHead = exeDat.coffHeader();
     OUT << "Printing COFF header properties";
     OUT << "Machine type: " << coffHead->machineType;
@@ -72,6 +73,7 @@ int main(int argc, char *argv[])
     for (int i = 0; i < secCount; i++) {
         section = secMgr->sectionAt(i);
         OUT << "\"" << section->name() << "\"";
+        OUT << " Linearized: " << section->linearize;
         OUT << " Virtual size: " << HEX(section->virtualSize);
         OUT << " Virtual address: " << HEX(section->virtualAddr);
         OUT << " Raw data size: " << HEX(section->rawData.size());
@@ -81,6 +83,7 @@ int main(int argc, char *argv[])
         OUT << " Line-numbers count: " << HEX(section->linenumsCount);
         OUT << " Characteristics: " << section->characteristics;
     }
+    */
 
     QFile outNew(testPath + "/Doukutsu.out.exe");
     QByteArray exeDatNew;

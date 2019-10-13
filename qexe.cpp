@@ -5,6 +5,7 @@
 
 QExe::QExe(QObject *parent) : QObject(parent)
 {
+    m_autoCreateRsrcManager = true;
     reset();
 }
 
@@ -14,6 +15,7 @@ void QExe::reset()
     m_coffHead = QSharedPointer<QExeCOFFHeader>(new QExeCOFFHeader(this));
     m_optHead = QSharedPointer<QExeOptionalHeader>(new QExeOptionalHeader(this));
     m_secMgr = QSharedPointer<QExeSectionManager>(new QExeSectionManager(this));
+    m_rsrcMgr = nullptr;
 }
 
 #define SET_ERROR_INFO(errName) \
@@ -63,6 +65,10 @@ bool QExe::read(QIODevice &src, QExeErrorInfo *errinfo)
     // section manager taking over to read sections
     m_secMgr->read(src);
 
+    if (m_autoCreateRsrcManager)
+        if (createRsrcManager(errinfo) == nullptr)
+            return false;
+
     return true;
 }
 
@@ -91,6 +97,14 @@ bool QExe::toBytes(QByteArray &dst, QExeErrorInfo *errinfo)
     buf.seek(alignForward(buf.pos(), static_cast<qint64>(m_optHead->fileAlign)));
 
     buf.close();
+
+    // remove generated .rsrc section
+    if (!m_rsrcMgr.isNull()) {
+        int rsI = m_secMgr->rsrcSectionIndex();
+        if (rsI > 0)
+            m_secMgr->removeSection(rsI);
+    }
+
     return true;
 }
 
@@ -114,16 +128,38 @@ QSharedPointer<QExeSectionManager> QExe::sectionManager()
     return m_secMgr;
 }
 
+QSharedPointer<QExeRsrcManager> QExe::rsrcManager()
+{
+    return m_rsrcMgr;
+}
+
+QSharedPointer<QExeRsrcManager> QExe::createRsrcManager(QExeErrorInfo *errinfo)
+{
+    if (m_rsrcMgr.isNull())
+        m_rsrcMgr = QSharedPointer<QExeRsrcManager>(new QExeRsrcManager(this));
+    // if we have a .rsrc section, read from it
+    int rsI = m_secMgr->rsrcSectionIndex();
+    if (rsI > 0) {
+        if (!m_rsrcMgr->read(m_secMgr->sectionAt(rsI), errinfo))
+            return nullptr;
+        m_secMgr->removeSection(rsI);
+    }
+    return m_rsrcMgr;
+}
+
 void QExe::updateHeaderSizes()
 {
     m_coffHead->optHeadSize = static_cast<quint16>(m_optHead->size());
     m_optHead->headerSize = m_dosStub->size() + m_coffHead->size() + m_optHead->size() + m_secMgr->headerSize();
+    if (!m_rsrcMgr.isNull())
+        m_optHead->headerSize += m_rsrcMgr->headerSize();
     m_optHead->headerSize = alignForward(m_optHead->headerSize, m_optHead->fileAlign);
 }
 
 static QMap<QLatin1String, QExeOptionalHeader::DataDirectories> secName2DataDir {
     { QLatin1String(".edata"), QExeOptionalHeader::ExportTable },
     { QLatin1String(".idata"), QExeOptionalHeader::ImportTable },
+    { QLatin1String(".rsrc"), QExeOptionalHeader::ResourceTable },
     { QLatin1String(".pdata"), QExeOptionalHeader::ExceptionTable },
     { QLatin1String(".reloc"), QExeOptionalHeader::BaseRelocationTable },
     { QLatin1String(".debug"), QExeOptionalHeader::DebugData },
@@ -133,6 +169,8 @@ static QMap<QLatin1String, QExeOptionalHeader::DataDirectories> secName2DataDir 
 
 bool QExe::updateComponents(QExeErrorInfo *errinfo)
 {
+    if (!m_rsrcMgr.isNull())
+        m_rsrcMgr->toSection();
     if (!m_secMgr->test(false, errinfo))
         return false;
     m_optHead->codeSize = 0;
@@ -168,4 +206,14 @@ bool QExe::updateComponents(QExeErrorInfo *errinfo)
     m_optHead->uninitializedDataSize = alignForward(m_optHead->uninitializedDataSize, m_optHead->sectionAlign);
     m_optHead->imageSize = alignForward(m_optHead->imageSize, m_optHead->sectionAlign);
     return true;
+}
+
+bool QExe::autoCreateRsrcManager() const
+{
+    return m_autoCreateRsrcManager;
+}
+
+void QExe::setAutoCreateRsrcManager(bool autoCreateRsrcManager)
+{
+    m_autoCreateRsrcManager = autoCreateRsrcManager;
 }

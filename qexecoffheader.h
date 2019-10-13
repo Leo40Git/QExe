@@ -13,9 +13,6 @@ class QExeSectionManager;
 class QEXE_EXPORT QExeCOFFHeader : public QObject
 {
     Q_OBJECT
-    friend class QExe;
-    friend class QExeOptionalHeader;
-    friend class QExeSectionManager;
 public:
     quint32 size() const;
     // https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#machine-types
@@ -75,6 +72,10 @@ public:
     Characteristics characteristics;
 
 private:
+    friend class QExe;
+    friend class QExeOptionalHeader;
+    friend class QExeSectionManager;
+
     explicit QExeCOFFHeader(QExe *exeDat, QObject *parent = nullptr);
     QExe *exeDat;
     bool read(QByteArray src, QExeErrorInfo *errinfo);

@@ -22,6 +22,8 @@ public:
         // BadSection
         BadSection_VirtualOverlap = 2 * 0x100,
         BadSection_LinearizeFailure,
+        // BadRsrc
+        BadRsrc_InvalidFormat = 3 * 0x100,
     };
     Q_ENUM(ErrorID)
     ErrorID errorID;

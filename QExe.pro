@@ -21,6 +21,8 @@ SOURCES += \
     qexecoffheader.cpp \
     qexedosstub.cpp \
     qexeoptionalheader.cpp \
+    qexersrcentry.cpp \
+    qexersrcmanager.cpp \
     qexesection.cpp \
     qexesectionmanager.cpp
 
@@ -31,8 +33,11 @@ HEADERS += \
     qexedosstub.h \
     qexeerrorinfo.h \
     qexeoptionalheader.h \
+    qexersrcentry.h \
+    qexersrcmanager.h \
     qexesection.h \
-    qexesectionmanager.h
+    qexesectionmanager.h \
+    typedef_version.h
 
 # Default rules for deployment.
 unix {

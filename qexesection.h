@@ -2,18 +2,14 @@
 #define QEXESECTION_H
 
 #include "QExe_global.h"
-#include "qexeerrorinfo.h"
 
-#ifndef QEXESECTIONMANAGER_H
 class QExeSectionManager;
-#endif
 
 #include <QSharedPointer>
 
 class QEXE_EXPORT QExeSection : public QObject
 {
     Q_OBJECT
-    friend class QExeSectionManager;
 public:
     enum Characteristic : quint32 {
         Reserved_00000 = 0x00000000, // Reserved for future use.
@@ -71,6 +67,8 @@ public:
     quint16 linenumsCount;
     Characteristics characteristics;
 private:
+    friend class QExeSectionManager;
+
     explicit QExeSection(QObject *parent = nullptr);
     explicit QExeSection(const QLatin1String &name, quint32 size, QObject *parent = nullptr);
     QByteArray nameBytes;
