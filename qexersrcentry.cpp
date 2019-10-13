@@ -5,7 +5,7 @@ QExeRsrcEntry::Type QExeRsrcEntry::type() const
     return m_type;
 }
 
-QLinkedList<QExeRsrcEntryPtr> QExeRsrcEntry::children()
+QLinkedList<QExeRsrcEntryPtr> QExeRsrcEntry::children() const
 {
     return m_children;
 }
@@ -53,7 +53,7 @@ QExeRsrcEntryPtr QExeRsrcEntry::createChild(QExeRsrcEntry::Type type, quint32 id
     return child;
 }
 
-QExeRsrcEntryPtr QExeRsrcEntry::child(const QString &name)
+QExeRsrcEntryPtr QExeRsrcEntry::child(const QString &name) const
 {
     QExeRsrcEntryPtr entry;
     foreach (entry, m_children) {
@@ -63,7 +63,7 @@ QExeRsrcEntryPtr QExeRsrcEntry::child(const QString &name)
     return nullptr;
 }
 
-QExeRsrcEntryPtr QExeRsrcEntry::child(quint32 id)
+QExeRsrcEntryPtr QExeRsrcEntry::child(quint32 id) const
 {
     QExeRsrcEntryPtr entry;
     foreach (entry, m_children) {
@@ -94,6 +94,72 @@ QExeRsrcEntryPtr QExeRsrcEntry::removeChild(quint32 id)
 void QExeRsrcEntry::removeAllChildren()
 {
     m_children.clear();
+}
+
+QList<QExeRsrcEntryPtr> QExeRsrcEntry::fromPath(const QString &path) const
+{
+    if (m_type != Directory)
+        return QList<QExeRsrcEntryPtr>();
+    QString pathT = path.trimmed();
+    if (pathT.isEmpty())
+        return QList<QExeRsrcEntryPtr>();
+    QStringList parts = path.split("/");
+    if (parts.size() < 1)
+        return QList<QExeRsrcEntryPtr>();
+    int partI = 0;
+    QExeRsrcEntryPtr entry = QExeRsrcEntryPtr(this);
+    QList<QExeRsrcEntryPtr> results;
+    QExeRsrcEntryPtr child;
+    while (partI < parts.size()) {
+        if (entry.isNull())
+            return QList<QExeRsrcEntryPtr>();
+        if (entry->type() != Directory)
+            return QList<QExeRsrcEntryPtr>();
+        QString part = parts[partI++];
+        if (part.compare("***") == 0) {
+            // wildcard: all
+            foreach (child, m_children) {
+                results += child;
+            }
+            return results;
+        } else if (part.compare("**") == 0) {
+            // wildcard: ID
+            foreach (child, m_children) {
+                if (child->name.isEmpty())
+                    results += child;
+            }
+            return results;
+        } else if (part.compare("*") == 0) {
+            // wildcard: name
+            foreach (child, m_children) {
+                if (!child->name.isEmpty())
+                    results += child;
+            }
+            return results;
+        } else {
+            if (part.startsWith("*")) {
+                // ID
+                quint32 id = part.mid(1).toUInt();
+                foreach (child, m_children) {
+                    if (id == child->id) {
+                        results.clear();
+                        results += child;
+                        entry = child;
+                    }
+                }
+            } else {
+                // name
+                foreach (child, m_children) {
+                    if (part.compare(child->name) == 0) {
+                        results.clear();
+                        results += child;
+                        entry = child;
+                    }
+                }
+            }
+        }
+    }
+    return results;
 }
 
 QExeRsrcEntry::QExeRsrcEntry(Type type, QObject *parent) : QObject(parent)

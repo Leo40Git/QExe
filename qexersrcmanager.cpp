@@ -24,6 +24,14 @@ QExeRsrcEntryPtr QExeRsrcManager::root() const
     return m_root;
 }
 
+QList<QExeRsrcEntryPtr> QExeRsrcManager::entriesFromPath(const QString &path) const
+{
+    QString p = path;
+    if (p.startsWith("/"))
+        p = p.mid(1);
+    return m_root->fromPath(p);
+}
+
 QExeRsrcManager::QExeRsrcManager(QExe *exeDat, QObject *parent) : QObject(parent)
 {
     this->exeDat = exeDat;

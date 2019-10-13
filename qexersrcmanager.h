@@ -19,6 +19,7 @@ class QEXE_EXPORT QExeRsrcManager : public QObject
 public:
     quint32 headerSize() const;
     QExeRsrcEntryPtr root() const;
+    QList<QExeRsrcEntryPtr> entriesFromPath(const QString &path) const;
 private:
     friend class QExe;
     friend class QExeOptionalHeader;
