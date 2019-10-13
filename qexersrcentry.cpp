@@ -1,7 +1,5 @@
 #include "qexersrcentry.h"
 
-#include <QTextCodec>
-
 QExeRsrcEntry::Type QExeRsrcEntry::type() const
 {
     return m_type;
