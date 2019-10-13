@@ -13,10 +13,6 @@
 
 constexpr quint32 hiMask = 0x80000000;
 
-#include <QDebug>
-#define OUT qDebug().noquote().nospace()
-#define HEX(n) "0x" << QString::number(n, 16).toUpper()
-
 quint32 QExeRsrcManager::headerSize() const
 {
     // our "header" is actually the .rsrc section's header, and section headers are always 0x28 bytes
@@ -39,7 +35,6 @@ bool QExeRsrcManager::read(QExeSectionPtr sec, QExeErrorInfo *errinfo)
     QBuffer buf(&sec->rawData);
     buf.open(QBuffer::ReadOnly);
     m_root->removeAllChildren();
-    OUT << "Reading root directory";
     if (!readDirectory(buf, m_root, sec->virtualAddr)) {
         SET_ERROR_INFO(BadRsrc_InvalidFormat)
         return false;
@@ -79,7 +74,6 @@ void QExeRsrcManager::toSection()
     ReferenceMemory refMem;
     SectionSizes sizes = calculateSectionSizes(m_root);
     QExeSectionPtr sec = exeDat->sectionManager()->createSection(QLatin1String(".rsrc"), sizes.totalSize());
-    OUT << "sec->virtualAddr = " << HEX(sec->virtualAddr);
     sec->characteristics = QExeSection::ContainsInitializedData | QExeSection::IsReadable;
     QBuffer buf(&sec->rawData);
     buf.open(QBuffer::WriteOnly);
@@ -93,24 +87,18 @@ bool QExeRsrcManager::readDirectory(QBuffer &src, QExeRsrcEntryPtr dir, quint32 
     QByteArray buf32(sizeof(quint32), 0);
     src.read(buf32.data(), sizeof(quint32));
     dir->directoryMeta.characteristics = qFromLittleEndian<quint32>(buf32.data());
-    OUT << " characteristics = " << HEX(dir->directoryMeta.characteristics);
     src.read(buf32.data(), sizeof(quint32));
     dir->directoryMeta.timestamp = qFromLittleEndian<quint32>(buf32.data());
-    OUT << " timestamp = " << HEX(dir->directoryMeta.timestamp);
     src.read(buf16.data(), sizeof(quint16));
     dir->directoryMeta.version.first = qFromLittleEndian<quint16>(buf16.data());
     src.read(buf16.data(), sizeof(quint16));
     dir->directoryMeta.version.second = qFromLittleEndian<quint16>(buf16.data());
-    OUT << " version = " << dir->directoryMeta.version.first << "." << dir->directoryMeta.version.second;
     src.read(buf16.data(), sizeof(quint16));
-    quint16 entriesName = qFromLittleEndian<quint16>(buf16.data());
+    quint16 entries = qFromLittleEndian<quint16>(buf16.data());
     src.read(buf16.data(), sizeof(quint16));
-    quint16 entriesID = qFromLittleEndian<quint16>(buf16.data());
-    quint16 entries = entriesID + entriesName;
-    OUT << " " << entriesName << " entries with name, " << entriesID << " entries with ID (" << entries << " entries total)";
+    entries += qFromLittleEndian<quint16>(buf16.data());
     for (quint32 i = 0; i < entries; i++)
         if (!readEntry(src, dir, offset)) {
-            OUT << " READ FAIL - readEntry returned false";
             return false;
         }
     return true;
@@ -118,7 +106,6 @@ bool QExeRsrcManager::readDirectory(QBuffer &src, QExeRsrcEntryPtr dir, quint32 
 
 bool QExeRsrcManager::readEntry(QBuffer &src, QExeRsrcEntryPtr dir, quint32 offset)
 {
-    OUT << " reading entry";
     QExeRsrcEntryPtr child = QExeRsrcEntryPtr(new QExeRsrcEntry(QExeRsrcEntry::Data));
 
     QByteArray buf16(sizeof(quint16), 0);
@@ -127,11 +114,10 @@ bool QExeRsrcManager::readEntry(QBuffer &src, QExeRsrcEntryPtr dir, quint32 offs
     src.read(buf32.data(), sizeof(quint32));
     quint32 nameOff = qFromLittleEndian<quint32>(buf32.data());
     qint64 prevPos = src.pos();
-    if ((nameOff & hiMask) == 0) {
+    if ((nameOff & hiMask) == 0)
         // id
         child->id = nameOff;
-        OUT << "  id = " << HEX(nameOff);
-    } else {
+    else {
         // name
         nameOff &= ~hiMask;
         src.seek(nameOff);
@@ -140,7 +126,6 @@ bool QExeRsrcManager::readEntry(QBuffer &src, QExeRsrcEntryPtr dir, quint32 offs
         QByteArray nameBytes = src.read(nameLen * 2);
         child->name = QTextCodec::codecForName("UTF-16LE")->makeDecoder(QTextCodec::IgnoreHeader)->toUnicode(nameBytes);
         src.seek(prevPos);
-        OUT << "  name = " << child->name;
     }
     // read data/directory
     src.read(buf32.data(), sizeof(quint32));
@@ -148,40 +133,28 @@ bool QExeRsrcManager::readEntry(QBuffer &src, QExeRsrcEntryPtr dir, quint32 offs
     prevPos = src.pos();
     if ((dataOff & hiMask) == 0) {
         // data
-        OUT << "  it's data!";
         src.seek(dataOff);
         src.read(buf32.data(), sizeof(quint32));
         quint32 dataPtr = qFromLittleEndian<quint32>(buf32.data()) - offset;
-        OUT << "   ptr = " << HEX(dataPtr);
         src.read(buf32.data(), sizeof(quint32));
         quint32 dataSize = qFromLittleEndian<quint32>(buf32.data());
-        OUT << "   size = " << HEX(dataSize);
         src.read(buf32.data(), sizeof(quint32));
         child->dataMeta.codepage = qFromLittleEndian<quint32>(buf32.data());
-        OUT << "   codepage = " << HEX(child->dataMeta.codepage);
         src.read(buf32.data(), sizeof(quint32));
         child->dataMeta.reserved = qFromLittleEndian<quint32>(buf32.data());
-        OUT << "   reserved = " << HEX(child->dataMeta.reserved);
         src.seek(dataPtr);
         child->data = src.read(dataSize);
     } else {
         // directory
-        OUT << "  it's a subdirectory!";
         dataOff &= ~hiMask;
         child->m_type = QExeRsrcEntry::Directory;
         src.seek(dataOff);
         if (!readDirectory(src, child, offset)) {
-            OUT << "READ FAIL - readDirectory returned false";
             return false;
         }
     }
     src.seek(prevPos);
-    if (dir->addChild(child))
-        return true;
-    else {
-        OUT << "READ FAIL - dir->addChild returned false";
-        return false;
-    }
+    return dir->addChild(child);
 }
 
 QExeRsrcManager::SectionSizes QExeRsrcManager::calculateSectionSizes(QExeRsrcEntryPtr root, QStringList *allocStr)

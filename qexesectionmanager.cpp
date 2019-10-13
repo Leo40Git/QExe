@@ -42,22 +42,18 @@ QExeSectionPtr QExeSectionManager::sectionWithName(const QLatin1String &name)
     return sectionAt(sectionIndexByName(name));
 }
 
-#include <QDebug>
-#define OUT qDebug().noquote().nospace()
-#define HEX(n) "0x" << QString::number(n, 16).toUpper()
 bool QExeSectionManager::addSection(QExeSectionPtr newSec)
 {
     if (newSec.isNull())
         return false;
     QLatin1String newSecName = newSec->name();
     QExeSectionPtr section;
-    // 2 sections with the same name aren't explicitly disallowed by the PE format docs,
-    // but we can safely assume that there should never be 2 with the same name here
+    // having 2 sections with the same name isn't explicitly disallowed by the PE format docs,
+    // but most "sane" linkers don't do that, so we can safely disallow that
     foreach (section, sections) {
         if (newSecName == section->name())
             return false;
     }
-    OUT << "adding new section \"" << newSecName << "\"";
     quint32 headerSize = exeDat->optionalHeader()->headerSize;
     if (newSec->virtualAddr < headerSize)
         newSec->virtualAddr = headerSize;
@@ -83,18 +79,13 @@ QExeSectionPtr QExeSectionManager::removeSection(const QLatin1String &name)
 
 QExeSectionPtr QExeSectionManager::createSection(const QLatin1String &name, quint32 size)
 {
-    OUT << "creating new section \"" << name << "\" with size " << HEX(size);
     QExeSectionPtr newSec = QExeSectionPtr(new QExeSection(name, size));
     newSec->linearize = false;
     int secs;
     if ((secs = sectionCount()) > 0) {
         QExeSectionPtr lastSec = sections[secs - 1];
-        OUT << "lastSec->name = " << lastSec->name();
-        OUT << "lastSec->virtualAddr = " << HEX(lastSec->virtualAddr);
-        OUT << "lastSec->virtualSize = " << HEX(lastSec->virtualSize);
         newSec->virtualAddr = QExe::alignForward(lastSec->virtualAddr + lastSec->virtualSize, exeDat->optionalHeader()->sectionAlign);
     }
-    OUT << "newSec->virtualAddr = " << HEX(newSec->virtualAddr);
     if (!addSection(newSec))
         return nullptr;
     return newSec;
@@ -218,7 +209,6 @@ bool checkAlloc(AllocMap &map, AllocSpan span, bool add = true) {
     QLinkedListIterator<AllocSpan> mapI(map);
     while (mapI.hasNext()) {
         const AllocSpan &chk = mapI.next();
-        OUT << "checking against start=" << HEX(chk.start) << ",length=" << HEX(chk.length);
         if (chk.collides(span))
             return false;
     }
@@ -231,7 +221,6 @@ bool QExeSectionManager::test(bool justOrderAndOverlap, QExeErrorInfo *errinfo)
 {
     QExeSectionPtr section;
     // -- Test virtual integrity
-    OUT << "sorting sections";
     std::sort(sections.begin(), sections.end(), sectionVALessThan);
     // set minimum usable RVA
     quint32 rvaHeaderFloor = 0;
@@ -245,31 +234,20 @@ bool QExeSectionManager::test(bool justOrderAndOverlap, QExeErrorInfo *errinfo)
         }
         rvaHeaderFloor = section->virtualAddr + section->virtualSize;
     }
-    OUT << "rvaHeaderFloor = " << HEX(rvaHeaderFloor);
     if (justOrderAndOverlap)
         return true;
     // -- Allocate file addresses
-    OUT << "allocating file addresses";
     quint32 fileAlign = exeDat->optionalHeader()->fileAlign;
     AllocMap map;
     // disallow collision with primary header
-    OUT << "adding new AllocSpan for primary header: start=" << HEX(0) << ",length=" << HEX(exeDat->optionalHeader()->headerSize);
     map += AllocSpan(0, exeDat->optionalHeader()->headerSize);
     for (int i = 0; i < 2; i++) {
-        OUT << "iteration " << i;
         foreach (section, sections) {
-            if (section->linearize != (i == 0)) {
-                if (i == 0)
-                    OUT << "skipping non-linearized section \"" << section->name() << "\" because we're on iteration 0";
-                else
-                    OUT << "skipping linearized section \"" << section->name() << "\" because we're not on iteration 0";
-                OUT << "section->linearize = " << HEX(section->linearize);
+            if (section->linearize != (i == 0))
                 continue;
-            }
             quint32 rawDataSize = static_cast<quint32>(section->rawData.size());
             bool ok = false;
             if (section->linearize) {
-                OUT << "attempting to linearize section \"" << section->name() << "\"";
                 if (QExe::alignForward(section->virtualAddr, fileAlign) != section->virtualAddr) {
                     if (errinfo != nullptr) {
                         errinfo->errorID = QExeErrorInfo::BadSection_LinearizeFailure;
@@ -281,14 +259,9 @@ bool QExeSectionManager::test(bool justOrderAndOverlap, QExeErrorInfo *errinfo)
                 section->rawDataPtr = section->virtualAddr;
             }
             if (!ok) {
-                OUT << "allocating file address for section \"" << section->name() << "\"";
-                OUT << "rawDataSize = " << HEX(rawDataSize);
                 AllocSpan span(0, rawDataSize);
-                OUT << "trying " << HEX(span.start);
-                while (!checkAlloc(map, span)) {
+                while (!checkAlloc(map, span))
                     span.start += fileAlign;
-                    OUT << "trying " << HEX(span.start);
-                }
                 section->rawDataPtr = span.start;
             }
         }
@@ -298,30 +271,24 @@ bool QExeSectionManager::test(bool justOrderAndOverlap, QExeErrorInfo *errinfo)
 
 void QExeSectionManager::positionSection(QExeSectionPtr newSec, quint32 i, quint32 sectionAlign)
 {
-    OUT << "positioning section \"" << newSec->name() << "\"";
     AllocMap map;
     // disallow collision with primary header
-    OUT << "adding new AllocSpan for primary header: start=" << HEX(0) << ",length=" << HEX(exeDat->optionalHeader()->headerSize);
     map += AllocSpan(0, exeDat->optionalHeader()->headerSize);
     // add other sections
     QExeSectionPtr section;
     foreach (section, sections) {
         map += AllocSpan(section->virtualAddr, QExe::alignForward(section->virtualSize, sectionAlign));
-        OUT << "adding new AllocSpan for section \"" << section->name() << "\": start=" << HEX(section->virtualAddr) << ",length=" << HEX(QExe::alignForward(section->virtualSize, sectionAlign));
     }
     AllocSpan as(0, QExe::alignForward(newSec->virtualSize, sectionAlign));
     while (true) {
         i = QExe::alignForward(i, sectionAlign);
         // is this OK?
         as.start = i;
-        OUT << "OUR AllocSpan: start=" << HEX(as.start) << ",length=" << HEX(as.length);
-        bool hit = checkAlloc(map, as, false);
-        if (!hit) {
-            OUT << "not good, trying again";
-            i += sectionAlign;
+        if (checkAlloc(map, as, false)) {
+            newSec->virtualAddr = i;
+            break;
+
         }
-        OUT << "good!!! newSec->virtualAddr = " << HEX(i);
-        newSec->virtualAddr = i;
-        break;
+        i += sectionAlign;
     }
 }

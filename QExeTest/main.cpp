@@ -7,6 +7,29 @@
 #define OUT qInfo().noquote().nospace()
 #define HEX(n) "0x" << QString::number(n, 16).toUpper()
 
+void rsrcPrintDirectory(const QString &indent, QExeRsrcEntryPtr dir) {
+    OUT << indent << "\"Characteristics\" (reserved, must be 0): " << dir->directoryMeta.characteristics;
+    OUT << indent << "Timestamp: " << dir->directoryMeta.timestamp;
+    OUT << indent << "Version: " << dir->directoryMeta.version.first << "." << dir->directoryMeta.version.second;
+    QLinkedList<QExeRsrcEntryPtr> children = dir->children();
+    OUT << indent << children.size() << " entries:";
+    QExeRsrcEntryPtr child;
+    foreach (child, children) {
+        OUT << indent << " Type: " << child->type();
+        if (child->name.isEmpty())
+            OUT << indent << " ID: " << child->id;
+        else
+            OUT << indent << " Name: " << child->name;
+        if (child->type() == QExeRsrcEntry::Directory) {
+            rsrcPrintDirectory(indent + " ", child);
+            continue;
+        }
+        OUT << indent << " Data size: " << HEX(child->data.size());
+        OUT << indent << " Codepage: " << HEX(child->dataMeta.codepage);
+        OUT << indent << " (reserved, must be 0): " << HEX(child->dataMeta.reserved);
+    }
+}
+
 int main(int argc, char *argv[])
 {
     (void)argc, (void)argv;
@@ -29,37 +52,36 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    /*
     QSharedPointer<QExeCOFFHeader> coffHead = exeDat.coffHeader();
-    OUT << "Printing COFF header properties";
-    OUT << "Machine type: " << coffHead->machineType;
-    OUT << "Timestamp: " << HEX(coffHead->timestamp);
-    OUT << "Symbol table pointer: " << HEX(coffHead->symTblPtr);
-    OUT << "Symbol table count: " << HEX(coffHead->symTblCount);
-    OUT << "Characteristics: " << coffHead->characteristics;
+    OUT << " == Printing COFF header properties == ";
+    OUT << " Machine type: " << coffHead->machineType;
+    OUT << " Timestamp: " << HEX(coffHead->timestamp);
+    OUT << " Symbol table pointer: " << HEX(coffHead->symTblPtr);
+    OUT << " Symbol table count: " << HEX(coffHead->symTblCount);
+    OUT << " Characteristics: " << coffHead->characteristics;
     QSharedPointer<QExeOptionalHeader> optHead = exeDat.optionalHeader();
-    OUT << "Printing optional header properties";
-    OUT << "Linker version: " << optHead->linkerVer.first << "." << optHead->linkerVer.second;
-    OUT << "Address of entry point: " << HEX(optHead->entryPointAddr);
-    OUT << "Base of code address: " << HEX(optHead->codeBaseAddr);
-    OUT << "Base of data address: " << HEX(optHead->dataBaseAddr);
-    OUT << "Image base: " << HEX(optHead->imageBase);
-    OUT << "Section alignment: " << HEX(optHead->sectionAlign);
-    OUT << "File alignment: " << HEX(optHead->fileAlign);
-    OUT << "Minumum OS version: " << optHead->minOSVer.first << "." << optHead->minOSVer.second;
-    OUT << "Image version: " << optHead->imageVer.first << "." << optHead->imageVer.second;
-    OUT << "Subsystem version: " << optHead->subsysVer.first << "." << optHead->subsysVer.second;
-    OUT << "\"Win32VersionValue\" (reserved, must be 0): " << HEX(optHead->win32VerValue);
-    OUT << "Checksum: " << HEX(optHead->checksum);
-    OUT << "Subsystem: " << optHead->subsystem;
-    OUT << "DLL characteristics: " << optHead->dllCharacteristics;
-    OUT << "Stack reserve size: " << HEX(optHead->stackReserveSize);
-    OUT << "Stack commit size: " << HEX(optHead->stackCommitSize);
-    OUT << "Heap reserve size: " << HEX(optHead->heapReserveSize);
-    OUT << "Heap commit size: " << HEX(optHead->heapCommitSize);
-    OUT << "\"LoaderFlags\" (reserved, must be 0): " << HEX(optHead->loaderFlags);
+    OUT << " == Printing optional header properties == ";
+    OUT << " Linker version: " << optHead->linkerVer.first << "." << optHead->linkerVer.second;
+    OUT << " Address of entry point: " << HEX(optHead->entryPointAddr);
+    OUT << " Base of code address: " << HEX(optHead->codeBaseAddr);
+    OUT << " Base of data address: " << HEX(optHead->dataBaseAddr);
+    OUT << " Image base: " << HEX(optHead->imageBase);
+    OUT << " Section alignment: " << HEX(optHead->sectionAlign);
+    OUT << " File alignment: " << HEX(optHead->fileAlign);
+    OUT << " Minumum OS version: " << optHead->minOSVer.first << "." << optHead->minOSVer.second;
+    OUT << " Image version: " << optHead->imageVer.first << "." << optHead->imageVer.second;
+    OUT << " Subsystem version: " << optHead->subsysVer.first << "." << optHead->subsysVer.second;
+    OUT << " \"Win32VersionValue\" (reserved, must be 0): " << HEX(optHead->win32VerValue);
+    OUT << " Checksum: " << HEX(optHead->checksum);
+    OUT << " Subsystem: " << optHead->subsystem;
+    OUT << " DLL characteristics: " << optHead->dllCharacteristics;
+    OUT << " Stack reserve size: " << HEX(optHead->stackReserveSize);
+    OUT << " Stack commit size: " << HEX(optHead->stackCommitSize);
+    OUT << " Heap reserve size: " << HEX(optHead->heapReserveSize);
+    OUT << " Heap commit size: " << HEX(optHead->heapCommitSize);
+    OUT << " \"LoaderFlags\" (reserved, must be 0): " << HEX(optHead->loaderFlags);
     int dirCount;
-    OUT << "Image data directories: " << (dirCount = optHead->dataDirectories.size()) << " total";
+    OUT << "Image data directories: (" << (dirCount = optHead->dataDirectories.size()) << " total)";
     QMetaEnum dirMeta = QMetaEnum::fromType<QExeOptionalHeader::DataDirectories>();
     DataDirectoryPtr dir;
     for (int i = 0; i < dirCount; i++) {
@@ -68,11 +90,11 @@ int main(int argc, char *argv[])
     }
     QSharedPointer<QExeSectionManager> secMgr = exeDat.sectionManager();
     int secCount;
-    OUT << "Printing sections (" << (secCount = secMgr->sectionCount()) << " total)";
+    OUT << " == Printing sections == (" << (secCount = secMgr->sectionCount()) << " total)";
     QExeSectionPtr section;
     for (int i = 0; i < secCount; i++) {
         section = secMgr->sectionAt(i);
-        OUT << "\"" << section->name() << "\"";
+        OUT << " - \"" << section->name() << "\"";
         OUT << " Linearized: " << section->linearize;
         OUT << " Virtual size: " << HEX(section->virtualSize);
         OUT << " Virtual address: " << HEX(section->virtualAddr);
@@ -83,7 +105,9 @@ int main(int argc, char *argv[])
         OUT << " Line-numbers count: " << HEX(section->linenumsCount);
         OUT << " Characteristics: " << section->characteristics;
     }
-    */
+    QSharedPointer<QExeRsrcManager> rsrcMgr = exeDat.rsrcManager();
+    OUT << " == Printing .rsrc section contents (root directory) == ";
+    rsrcPrintDirectory(QString(""), rsrcMgr->root());
 
     QFile outNew(testPath + "/Doukutsu.out.exe");
     QByteArray exeDatNew;
