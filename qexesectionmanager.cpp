@@ -58,7 +58,7 @@ bool QExeSectionManager::addSection(QExeSectionPtr newSec)
             return false;
     }
     OUT << "adding new section \"" << newSecName << "\"";
-    quint32 headerSize = exeDat->optionalHeader()->headerSize + 0x28; // +0x28 because we're adding a new section
+    quint32 headerSize = exeDat->optionalHeader()->headerSize;
     if (newSec->virtualAddr < headerSize)
         newSec->virtualAddr = headerSize;
     positionSection(newSec, newSec->virtualAddr, exeDat->optionalHeader()->sectionAlign);
