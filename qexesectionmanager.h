@@ -2,7 +2,7 @@
 #define QEXESECTIONMANAGER_H
 
 #include <QObject>
-#include <QIODevice>
+#include <QBuffer>
 #include <QVector>
 #include <QSharedPointer>
 
@@ -28,6 +28,7 @@ public:
     QExeSectionPtr removeSection(int index);
     QExeSectionPtr removeSection(const QLatin1String &name);
     QExeSectionPtr createSection(const QLatin1String &name, quint32 size);
+    QBuffer *setupRVAPoint(quint32 rva, QIODevice::OpenMode mode);
 private:
     friend class QExe;
     friend class QExeDOSStub;

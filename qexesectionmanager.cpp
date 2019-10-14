@@ -91,6 +91,24 @@ QExeSectionPtr QExeSectionManager::createSection(const QLatin1String &name, quin
     return newSec;
 }
 
+QBuffer *QExeSectionManager::setupRVAPoint(quint32 rva, QIODevice::OpenMode mode)
+{
+    rva %= exeDat->optionalHeader()->imageBase;
+    QExeSectionPtr section;
+    foreach (section, sections) {
+        if (rva >= section->virtualAddr) {
+            quint32 rel = rva - section->virtualAddr;
+            if (rel < qMax(static_cast<quint32>(section->rawData.size()), section->virtualSize)) {
+                QBuffer *out = new QBuffer(&section->rawData);
+                out->open(mode);
+                out->seek(rel);
+                return out;
+            }
+        }
+    }
+    return nullptr;
+}
+
 int QExeSectionManager::rsrcSectionIndex()
 {
     QList<DataDirectoryPtr> dataDirs = exeDat->optionalHeader()->dataDirectories;
