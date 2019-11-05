@@ -23,6 +23,7 @@ public:
             val += align - mod;
         return val;
     }
+    static bool dataDirSectionName(QExeOptionalHeader::DataDirectories dataDir, QLatin1String *secName);
     explicit QExe(QObject *parent = nullptr);
     void reset();
     bool read(QIODevice &src, QExeErrorInfo *errinfo = nullptr);
@@ -33,8 +34,11 @@ public:
     QSharedPointer<QExeSectionManager> sectionManager();
     QSharedPointer<QExeRsrcManager> rsrcManager();
     QSharedPointer<QExeRsrcManager> createRsrcManager(QExeErrorInfo *errinfo = nullptr);
+    bool removeRsrcManager();
     bool autoCreateRsrcManager() const;
     void setAutoCreateRsrcManager(bool autoCreateRsrcManager);
+    bool autoAddFillerSections() const;
+    void setAutoAddFillerSections(bool autoAddFillerSections);
 
 private:
     friend class QExeCOFFHeader;
@@ -43,8 +47,9 @@ private:
     friend class QExeRsrcManager;
 
     void updateHeaderSizes();
-    bool updateComponents(QExeErrorInfo *error);
+    bool updateComponents(quint32 *fileSize, QExeErrorInfo *error);
     bool m_autoCreateRsrcManager;
+    bool m_autoAddFillerSections;
     QSharedPointer<QExeDOSStub> m_dosStub;
     QSharedPointer<QExeCOFFHeader> m_coffHead;
     QSharedPointer<QExeOptionalHeader> m_optHead;

@@ -11,24 +11,24 @@
         errinfo->errorID = QExeErrorInfo::errName; \
     }
 
-quint32 QExeSectionManager::headerSize()
+quint32 QExeSectionManager::headerSize() const
 {
     return static_cast<quint32>(sections.size()) * 0x28;
 }
 
-int QExeSectionManager::sectionCount()
+int QExeSectionManager::sectionCount() const
 {
     return sections.size();
 }
 
-QExeSectionPtr QExeSectionManager::sectionAt(int index)
+QExeSectionPtr QExeSectionManager::sectionAt(int index) const
 {
     if (index < 0 || index >= sections.size())
         return nullptr;
     return sections[index];
 }
 
-int QExeSectionManager::sectionIndexByName(const QLatin1String &name)
+int QExeSectionManager::sectionIndexByName(const QLatin1String &name) const
 {
     for (int i = 0; i < sections.size(); i++) {
         if (sections[i]->name() == name)
@@ -37,7 +37,7 @@ int QExeSectionManager::sectionIndexByName(const QLatin1String &name)
     return -1;
 }
 
-QExeSectionPtr QExeSectionManager::sectionWithName(const QLatin1String &name)
+QExeSectionPtr QExeSectionManager::sectionWithName(const QLatin1String &name) const
 {
     return sectionAt(sectionIndexByName(name));
 }
@@ -91,7 +91,7 @@ QExeSectionPtr QExeSectionManager::createSection(const QLatin1String &name, quin
     return newSec;
 }
 
-QBuffer *QExeSectionManager::setupRVAPoint(quint32 rva, QIODevice::OpenMode mode)
+QBuffer *QExeSectionManager::setupRVAPoint(quint32 rva, QIODevice::OpenMode mode) const
 {
     rva %= exeDat->optionalHeader()->imageBase;
     QExeSectionPtr section;
@@ -235,7 +235,7 @@ bool checkAlloc(AllocMap &map, AllocSpan span, bool add = true) {
     return true;
 }
 
-bool QExeSectionManager::test(bool justOrderAndOverlap, QExeErrorInfo *errinfo)
+bool QExeSectionManager::test(bool justOrderAndOverlap, quint32 *fileSize, QExeErrorInfo *errinfo)
 {
     QExeSectionPtr section;
     // -- Test virtual integrity
@@ -284,6 +284,18 @@ bool QExeSectionManager::test(bool justOrderAndOverlap, QExeErrorInfo *errinfo)
             }
         }
     }
+    if (!fileSize)
+        return false;
+    // -- Calculate file size
+    *fileSize = 0;
+    QLinkedListIterator<AllocSpan> mapI(map);
+    while (mapI.hasNext()) {
+        const AllocSpan &span = mapI.next();
+        quint32 v = span.start + span.length;
+        if (v > *fileSize)
+            *fileSize = v;
+    }
+    QExe::alignForward(*fileSize, fileAlign);
     return true;
 }
 

@@ -3,9 +3,34 @@
 #include <QtEndian>
 #include <QBuffer>
 
+static QMap<QLatin1String, QExeOptionalHeader::DataDirectories> secName2DataDir {
+    { QLatin1String(".edata"), QExeOptionalHeader::ExportTable },
+    { QLatin1String(".idata"), QExeOptionalHeader::ImportTable },
+    { QLatin1String(".rsrc"), QExeOptionalHeader::ResourceTable },
+    { QLatin1String(".pdata"), QExeOptionalHeader::ExceptionTable },
+    { QLatin1String(".reloc"), QExeOptionalHeader::BaseRelocationTable },
+    { QLatin1String(".debug"), QExeOptionalHeader::DebugData },
+    { QLatin1String(".tls"), QExeOptionalHeader::ThreadLocalStorageTable },
+    { QLatin1String(".cormeta"), QExeOptionalHeader::CLRRuntimeHeader },
+};
+
+bool QExe::dataDirSectionName(QExeOptionalHeader::DataDirectories dataDir, QLatin1String *secName)
+{
+    if (!secName)
+        return false;
+    for (auto it = secName2DataDir.constKeyValueBegin() ; it != secName2DataDir.constKeyValueEnd() ; ++it) {
+        if ((*it).second == dataDir) {
+            *secName = (*it).first;
+            return true;
+        }
+    }
+    return false;
+}
+
 QExe::QExe(QObject *parent) : QObject(parent)
 {
     m_autoCreateRsrcManager = true;
+    m_autoAddFillerSections = true;
     reset();
 }
 
@@ -74,11 +99,11 @@ bool QExe::read(QIODevice &src, QExeErrorInfo *errinfo)
 
 bool QExe::toBytes(QByteArray &dst, QExeErrorInfo *errinfo)
 {
-    if (!updateComponents(errinfo))
+    quint32 fileSize;
+    if (!updateComponents(&fileSize, errinfo))
         return false;
 
-    QByteArray buf32(sizeof(quint32), 0);
-    dst = QByteArray();
+    dst = QByteArray(static_cast<qint32>(fileSize), 0);
     QBuffer buf(&dst);
     buf.open(QBuffer::WriteOnly);
 
@@ -93,8 +118,6 @@ bool QExe::toBytes(QByteArray &dst, QExeErrorInfo *errinfo)
     buf.write(m_optHead->toBytes());
     // section manager taking over to write sections
     m_secMgr->write(buf);
-    // pad to file align
-    buf.seek(alignForward(buf.pos(), static_cast<qint64>(m_optHead->fileAlign)));
 
     buf.close();
 
@@ -147,6 +170,14 @@ QSharedPointer<QExeRsrcManager> QExe::createRsrcManager(QExeErrorInfo *errinfo)
     return m_rsrcMgr;
 }
 
+bool QExe::removeRsrcManager()
+{
+    if (m_rsrcMgr.isNull())
+        return false;
+    m_rsrcMgr = nullptr;
+    return true;
+}
+
 void QExe::updateHeaderSizes()
 {
     m_coffHead->optHeadSize = static_cast<quint16>(m_optHead->size());
@@ -156,22 +187,11 @@ void QExe::updateHeaderSizes()
     m_optHead->headerSize = alignForward(m_optHead->headerSize, m_optHead->fileAlign);
 }
 
-static QMap<QLatin1String, QExeOptionalHeader::DataDirectories> secName2DataDir {
-    { QLatin1String(".edata"), QExeOptionalHeader::ExportTable },
-    { QLatin1String(".idata"), QExeOptionalHeader::ImportTable },
-    { QLatin1String(".rsrc"), QExeOptionalHeader::ResourceTable },
-    { QLatin1String(".pdata"), QExeOptionalHeader::ExceptionTable },
-    { QLatin1String(".reloc"), QExeOptionalHeader::BaseRelocationTable },
-    { QLatin1String(".debug"), QExeOptionalHeader::DebugData },
-    { QLatin1String(".tls"), QExeOptionalHeader::ThreadLocalStorageTable },
-    { QLatin1String(".cormeta"), QExeOptionalHeader::CLRRuntimeHeader },
-};
-
-bool QExe::updateComponents(QExeErrorInfo *errinfo)
+bool QExe::updateComponents(quint32 *fileSize, QExeErrorInfo *errinfo)
 {
     if (!m_rsrcMgr.isNull())
         m_rsrcMgr->toSection();
-    if (!m_secMgr->test(false, errinfo))
+    if (!m_secMgr->test(false, fileSize, errinfo))
         return false;
     m_optHead->codeSize = 0;
     m_optHead->initializedDataSize = 0;
@@ -216,4 +236,14 @@ bool QExe::autoCreateRsrcManager() const
 void QExe::setAutoCreateRsrcManager(bool autoCreateRsrcManager)
 {
     m_autoCreateRsrcManager = autoCreateRsrcManager;
+}
+
+bool QExe::autoAddFillerSections() const
+{
+    return m_autoAddFillerSections;
+}
+
+void QExe::setAutoAddFillerSections(bool autoAddFillerSections)
+{
+    m_autoAddFillerSections = autoAddFillerSections;
 }

@@ -12,6 +12,7 @@ class QExeRsrcManager;
 
 class QExeRsrcEntry;
 typedef QSharedPointer<QExeRsrcEntry> QExeRsrcEntryPtr;
+typedef QSharedPointer<const QExeRsrcEntry> QExeRsrcEntryConstPtr;
 
 class QEXE_EXPORT QExeRsrcEntry : public QObject
 {

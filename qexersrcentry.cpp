@@ -107,7 +107,7 @@ QList<QExeRsrcEntryPtr> QExeRsrcEntry::fromPath(const QString &path) const
     if (parts.size() < 1)
         return QList<QExeRsrcEntryPtr>();
     int partI = 0;
-    QExeRsrcEntryPtr entry = QExeRsrcEntryPtr(this);
+    QExeRsrcEntryConstPtr entry = QExeRsrcEntryConstPtr(this);
     QList<QExeRsrcEntryPtr> results;
     QExeRsrcEntryPtr child;
     while (partI < parts.size()) {
@@ -118,20 +118,26 @@ QList<QExeRsrcEntryPtr> QExeRsrcEntry::fromPath(const QString &path) const
         QString part = parts[partI++];
         if (part.compare("***") == 0) {
             // wildcard: all
-            foreach (child, m_children) {
+            if (partI != parts.size() - 1)
+                return QList<QExeRsrcEntryPtr>();
+            foreach (child, entry->children()) {
                 results += child;
             }
             return results;
         } else if (part.compare("**") == 0) {
             // wildcard: ID
-            foreach (child, m_children) {
+            if (partI != parts.size() - 1)
+                return QList<QExeRsrcEntryPtr>();
+            foreach (child, entry->children()) {
                 if (child->name.isEmpty())
                     results += child;
             }
             return results;
         } else if (part.compare("*") == 0) {
             // wildcard: name
-            foreach (child, m_children) {
+            if (partI != parts.size() - 1)
+                return QList<QExeRsrcEntryPtr>();
+            foreach (child, entry->children()) {
                 if (!child->name.isEmpty())
                     results += child;
             }
@@ -140,7 +146,7 @@ QList<QExeRsrcEntryPtr> QExeRsrcEntry::fromPath(const QString &path) const
             if (part.startsWith("*")) {
                 // ID
                 quint32 id = part.mid(1).toUInt();
-                foreach (child, m_children) {
+                foreach (child, entry->children()) {
                     if (id == child->id) {
                         results.clear();
                         results += child;
@@ -149,7 +155,7 @@ QList<QExeRsrcEntryPtr> QExeRsrcEntry::fromPath(const QString &path) const
                 }
             } else {
                 // name
-                foreach (child, m_children) {
+                foreach (child, entry->children()) {
                     if (part.compare(child->name) == 0) {
                         results.clear();
                         results += child;
