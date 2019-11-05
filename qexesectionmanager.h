@@ -9,11 +9,11 @@
 #include "QExe_global.h"
 #include "qexeerrorinfo.h"
 #include "qexesection.h"
-#include "qexeoptionalheader.h"
 
 class QExe;
 class QExeDOSStub;
 class QExeCOFFHeader;
+class QExeOptionalHeader;
 
 class QEXE_EXPORT QExeSectionManager : public QObject
 {
