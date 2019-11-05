@@ -285,7 +285,7 @@ bool QExeSectionManager::test(bool justOrderAndOverlap, quint32 *fileSize, QExeE
         }
     }
     if (!fileSize)
-        return false;
+        return true;
     // -- Calculate file size
     *fileSize = 0;
     QLinkedListIterator<AllocSpan> mapI(map);
