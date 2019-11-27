@@ -1,4 +1,5 @@
 #include <QFile>
+#include <QDir>
 #include <QDebug>
 #include <QMetaEnum>
 
@@ -36,8 +37,9 @@ int main(int argc, char *argv[])
 
     QExe exeDat;
 
-    QString testPath("CaveStoryEN");
-    QFile exeFile(testPath + "/Doukutsu.exe");
+    QDir testDir("CaveStoryEN");
+    testDir.makeAbsolute();
+    QFile exeFile(QString("%1/Doukutsu.exe").arg(testDir.absolutePath()));
     if (!exeFile.exists()) {
         OUT << "Could not find EXE file \"" << exeFile.fileName() << "\":";
         return 1;
@@ -109,7 +111,7 @@ int main(int argc, char *argv[])
     OUT << " == Printing .rsrc section contents (root directory) == ";
     rsrcPrintDirectory(QString(""), rsrcMgr->root());
 
-    QFile outNew(testPath + "/Doukutsu.out.exe");
+    QFile outNew(QString("%1/Doukutsu.out.exe").arg(testDir.absolutePath()));
     outNew.open(QFile::WriteOnly);
     if (!exeDat.write(outNew, &errinfo)) {
         OUT << "Error while writing EXE file \"" << outNew.fileName() << "\":";

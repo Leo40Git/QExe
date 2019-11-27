@@ -147,27 +147,27 @@ bool QExe::write(QIODevice &dst, QExeErrorInfo *errinfo)
     return true;
 }
 
-QSharedPointer<QExeDOSStub> QExe::dosStub()
+QSharedPointer<QExeDOSStub> QExe::dosStub() const
 {
     return m_dosStub;
 }
 
-QSharedPointer<QExeCOFFHeader> QExe::coffHeader()
+QSharedPointer<QExeCOFFHeader> QExe::coffHeader() const
 {
     return m_coffHead;
 }
 
-QSharedPointer<QExeOptionalHeader> QExe::optionalHeader()
+QSharedPointer<QExeOptionalHeader> QExe::optionalHeader() const
 {
     return m_optHead;
 }
 
-QSharedPointer<QExeSectionManager> QExe::sectionManager()
+QSharedPointer<QExeSectionManager> QExe::sectionManager() const
 {
     return m_secMgr;
 }
 
-QSharedPointer<QExeRsrcManager> QExe::rsrcManager()
+QSharedPointer<QExeRsrcManager> QExe::rsrcManager() const
 {
     return m_rsrcMgr;
 }
@@ -189,10 +189,12 @@ QSharedPointer<QExeRsrcManager> QExe::createRsrcManager(QExeErrorInfo *errinfo)
     return m_rsrcMgr;
 }
 
-bool QExe::removeRsrcManager()
+bool QExe::removeRsrcManager(bool keepRsrcSection)
 {
     if (m_rsrcMgr.isNull())
         return false;
+    if (keepRsrcSection)
+        m_rsrcMgr->toSection();
     m_rsrcMgr = nullptr;
     return true;
 }
@@ -271,6 +273,7 @@ QExeSectionPtr QExe::createFillerSection(int num, quint32 addr, quint32 size)
     QString nameSrc = QString(".flr%1").arg(QString::number(num, 16).toUpper().rightJustified(4, '0'));
     QExeSectionPtr newSec = QExeSectionPtr(new QExeSection(QLatin1String(nameSrc.toLatin1()), size));
     newSec->virtualAddr = addr;
+    newSec->characteristics = fillerChrs;
     return newSec;
 }
 
