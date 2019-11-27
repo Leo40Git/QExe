@@ -129,8 +129,11 @@ bool QExe::write(QIODevice &dst, QExeErrorInfo *errinfo)
     m_secMgr->write(dst);
 
     // pad EXE to expected file size
-    QByteArray pad(static_cast<int>(dst.pos() - fileSize), 0);
-    dst.write(pad);
+    int padSize = static_cast<int>(fileSize - dst.pos());
+    if (padSize > 0) {
+        QByteArray pad(padSize, 0);
+        dst.write(pad);
+    }
 
     // remove generated .rsrc section
     if (!m_rsrcMgr.isNull()) {
