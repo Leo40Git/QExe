@@ -17,7 +17,7 @@ void rsrcPrintDirectory(const QString &indent, QExeRsrcEntryPtr dir) {
     foreach (child, children) {
         OUT << indent << " Type: " << child->type();
         if (child->name.isEmpty())
-            OUT << indent << " ID: " << child->id;
+            OUT << indent << " ID: " << HEX(child->id);
         else
             OUT << indent << " Name: " << child->name;
         if (child->type() == QExeRsrcEntry::Directory) {
@@ -110,15 +110,13 @@ int main(int argc, char *argv[])
     rsrcPrintDirectory(QString(""), rsrcMgr->root());
 
     QFile outNew(testPath + "/Doukutsu.out.exe");
-    QByteArray exeDatNew;
-    if (!exeDat.toBytes(exeDatNew, &errinfo)) {
+    outNew.open(QFile::WriteOnly);
+    if (!exeDat.write(outNew, &errinfo)) {
         OUT << "Error while writing EXE file \"" << outNew.fileName() << "\":";
         OUT << "ID: " << errinfo.errorID;
         OUT << "Details: " << errinfo.details;
         return 1;
     }
-    outNew.open(QFile::WriteOnly);
-    outNew.write(exeDatNew);
     outNew.close();
     OUT << "Wrote new EXE to \"" << outNew.fileName() << "\"";
 

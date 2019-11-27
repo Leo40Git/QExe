@@ -97,29 +97,40 @@ bool QExe::read(QIODevice &src, QExeErrorInfo *errinfo)
     return true;
 }
 
-bool QExe::toBytes(QByteArray &dst, QExeErrorInfo *errinfo)
+bool QExe::write(QIODevice &dst, QExeErrorInfo *errinfo)
 {
+    // make sure dst is usable
+    if (!dst.isWritable()) {
+        SET_ERROR_INFO(BadIODevice_Unwritable)
+        return false;
+    }
+    if (dst.isSequential()) {
+        SET_ERROR_INFO(BadIODevice_Sequential)
+        return false;
+    }
+
+    // make sure everyone's up to date & calculate expected file size
     quint32 fileSize;
     if (!updateComponents(&fileSize, errinfo))
         return false;
 
-    dst = QByteArray(static_cast<qint32>(fileSize), 0);
-    QBuffer buf(&dst);
-    buf.open(QBuffer::WriteOnly);
-
     // write DOS stub
-    buf.write(m_dosStub->data);
+    dst.write(m_dosStub->data);
     // write "PE\0\0" signature
-    QLatin1String sig("PE\0\0");
-    buf.write(sig.data(), 4);
+    dst.putChar('P');
+    dst.putChar('E');
+    dst.putChar(0);
+    dst.putChar(0);
     // write COFF header
-    buf.write(m_coffHead->toBytes());
+    dst.write(m_coffHead->toBytes());
     // write optional header
-    buf.write(m_optHead->toBytes());
+    dst.write(m_optHead->toBytes());
     // section manager taking over to write sections
-    m_secMgr->write(buf);
+    m_secMgr->write(dst);
 
-    buf.close();
+    // pad EXE to expected file size
+    QByteArray pad(static_cast<int>(dst.pos() - fileSize), 0);
+    dst.write(pad);
 
     // remove generated .rsrc section
     if (!m_rsrcMgr.isNull()) {
@@ -158,13 +169,16 @@ QSharedPointer<QExeRsrcManager> QExe::rsrcManager()
 
 QSharedPointer<QExeRsrcManager> QExe::createRsrcManager(QExeErrorInfo *errinfo)
 {
-    if (m_rsrcMgr.isNull())
-        m_rsrcMgr = QSharedPointer<QExeRsrcManager>(new QExeRsrcManager(this));
+    if (!m_rsrcMgr.isNull())
+        return m_rsrcMgr;
+    m_rsrcMgr = QSharedPointer<QExeRsrcManager>(new QExeRsrcManager(this));
     // if we have a .rsrc section, read from it
     int rsI = m_secMgr->rsrcSectionIndex();
     if (rsI > 0) {
-        if (!m_rsrcMgr->read(m_secMgr->sectionAt(rsI), errinfo))
+        if (!m_rsrcMgr->read(m_secMgr->sectionAt(rsI), errinfo)) {
+            m_rsrcMgr = nullptr;
             return nullptr;
+        }
         m_secMgr->removeSection(rsI);
     }
     return m_rsrcMgr;

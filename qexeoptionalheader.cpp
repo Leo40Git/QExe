@@ -50,7 +50,7 @@ bool QExeOptionalHeader::read(QByteArray src, QExeErrorInfo *errinfo) {
 
     QBuffer buf(&src);
     buf.open(QBuffer::ReadOnly);
-    // Standard
+    // check if this is a PE32 file
     buf.read(buf16.data(), sizeof(quint16));
     quint16 magic = qFromLittleEndian<quint16>(buf16.data());
     if (magic != 0x10B) {
@@ -60,6 +60,7 @@ bool QExeOptionalHeader::read(QByteArray src, QExeErrorInfo *errinfo) {
         }
         return false;
     }
+    // Standard
     READ_VERSION(linker, 8)
     buf.read(buf32.data(), sizeof(quint32));
     codeSize = qFromLittleEndian<quint32>(buf32.data());

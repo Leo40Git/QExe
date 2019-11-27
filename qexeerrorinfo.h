@@ -15,6 +15,7 @@ public:
         // BadIODevice
         BadIODevice_Unreadable = 0 * 0x100,
         BadIODevice_Sequential,
+        BadIODevice_Unwritable,
         // BadPEFile
         BadPEFile_InvalidSignature = 1 * 0x100,
         BadPEFile_InvalidSectionCount,

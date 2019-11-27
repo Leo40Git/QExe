@@ -27,7 +27,7 @@ public:
     explicit QExe(QObject *parent = nullptr);
     void reset();
     bool read(QIODevice &src, QExeErrorInfo *errinfo = nullptr);
-    bool toBytes(QByteArray &dst, QExeErrorInfo *errinfo = nullptr);
+    bool write(QIODevice &dst, QExeErrorInfo *errinfo = nullptr);
     QSharedPointer<QExeDOSStub> dosStub();
     QSharedPointer<QExeCOFFHeader> coffHeader();
     QSharedPointer<QExeOptionalHeader> optionalHeader();
