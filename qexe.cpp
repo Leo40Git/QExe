@@ -141,6 +141,8 @@ bool QExe::write(QIODevice &dst, QExeErrorInfo *errinfo)
         if (rsI > 0)
             m_secMgr->removeSection(rsI);
     }
+    // ...and filler sections
+    removeFillerSections();
 
     return true;
 }
@@ -208,6 +210,11 @@ bool QExe::updateComponents(quint32 *fileSize, QExeErrorInfo *errinfo)
 {
     if (!m_rsrcMgr.isNull())
         m_rsrcMgr->toSection();
+    if (m_autoAddFillerSections) {
+        if (!m_secMgr->test(true, nullptr, errinfo))
+            return false;
+        addFillerSections();
+    }
     if (!m_secMgr->test(false, fileSize, errinfo))
         return false;
     m_optHead->codeSize = 0;
@@ -243,6 +250,56 @@ bool QExe::updateComponents(quint32 *fileSize, QExeErrorInfo *errinfo)
     m_optHead->uninitializedDataSize = alignForward(m_optHead->uninitializedDataSize, m_optHead->sectionAlign);
     m_optHead->imageSize = alignForward(m_optHead->imageSize, m_optHead->sectionAlign);
     return true;
+}
+
+const QExeSection::Characteristics fillerChrs = QExeSection::ContainsUninitializedData | QExeSection::IsReadable | QExeSection::IsWritable;
+
+bool QExe::isFillerSection(QExeSectionPtr sec)
+{
+    if (sec->characteristics != fillerChrs)
+        return false;
+    QString name = sec->name();
+    if (!name.startsWith(QString(".flr")))
+        return false;
+    bool ok = false;
+    name.mid(4).toUInt(&ok, 16);
+    return ok;
+}
+
+QExeSectionPtr QExe::createFillerSection(int num, quint32 addr, quint32 size)
+{
+    QString nameSrc = QString(".flr%1").arg(QString::number(num, 16).toUpper().rightJustified(4, '0'));
+    QExeSectionPtr newSec = QExeSectionPtr(new QExeSection(QLatin1String(nameSrc.toLatin1()), size));
+    newSec->virtualAddr = addr;
+    return newSec;
+}
+
+void QExe::addFillerSections()
+{
+    int secCnt = m_secMgr->sectionCount();
+    QVector<QExeSectionPtr> fillersToAdd;
+    quint32 lastAddr = 0;
+    int fillerNum = 0;
+    for (int i = 0; i < secCnt; i++) {
+        QExeSectionPtr sec = m_secMgr->sectionAt(i);
+        if (lastAddr != 0) {
+            if (sec->virtualAddr != lastAddr)
+                fillersToAdd += createFillerSection(fillerNum++, lastAddr, sec->virtualAddr - lastAddr);
+        }
+        lastAddr = alignForward(sec->virtualAddr + sec->virtualSize, m_optHead->sectionAlign);
+    }
+}
+
+void QExe::removeFillerSections()
+{
+    QExeSectionPtr sec;
+    QVector<QExeSectionPtr> secsToRem;
+    for (int i = 0; i < m_secMgr->sectionCount(); i++) {
+        sec = m_secMgr->sectionAt(i);
+        if (isFillerSection(sec))
+            secsToRem += sec;
+    }
+    m_secMgr->removeSections(secsToRem);
 }
 
 bool QExe::autoCreateRsrcManager() const

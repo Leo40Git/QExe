@@ -55,6 +55,10 @@ private:
     QSharedPointer<QExeOptionalHeader> m_optHead;
     QSharedPointer<QExeSectionManager> m_secMgr;
     QSharedPointer<QExeRsrcManager> m_rsrcMgr;
+    bool isFillerSection(QExeSectionPtr sec);
+    QExeSectionPtr createFillerSection(int num, quint32 addr, quint32 size);
+    void addFillerSections();
+    void removeFillerSections();
 };
 
 #endif // QEXE_H

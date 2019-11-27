@@ -42,6 +42,20 @@ QExeSectionPtr QExeSectionManager::sectionWithName(const QLatin1String &name) co
     return sectionAt(sectionIndexByName(name));
 }
 
+bool QExeSectionManager::containsSection(QExeSectionPtr sec) const
+{
+    return sections.contains(sec);
+}
+
+QVector<bool> QExeSectionManager::containsSections(QVector<QExeSectionPtr> secs) const
+{
+    QVector<bool> ret;
+    QExeSectionPtr sec;
+    foreach (sec, secs)
+        ret += containsSection(sec);
+    return ret;
+}
+
 bool QExeSectionManager::addSection(QExeSectionPtr newSec)
 {
     if (newSec.isNull())
@@ -63,6 +77,29 @@ bool QExeSectionManager::addSection(QExeSectionPtr newSec)
     return true;
 }
 
+QVector<bool> QExeSectionManager::addSections(QVector<QExeSectionPtr> newSecs)
+{
+    QVector<bool> ret;
+    QExeSectionPtr sec;
+    foreach (sec, newSecs)
+        ret += addSection(sec);
+    return ret;
+}
+
+bool QExeSectionManager::removeSection(QExeSectionPtr sec)
+{
+    return sections.removeOne(sec);
+}
+
+QVector<bool> QExeSectionManager::removeSections(QVector<QExeSectionPtr> secs)
+{
+    QVector<bool> ret;
+    QExeSectionPtr sec;
+    foreach (sec, secs)
+        ret += removeSection(sec);
+    return ret;
+}
+
 QExeSectionPtr QExeSectionManager::removeSection(int index)
 {
     if (index < 0 || index >= sections.size())
@@ -72,9 +109,34 @@ QExeSectionPtr QExeSectionManager::removeSection(int index)
     return sec;
 }
 
+QVector<QExeSectionPtr> QExeSectionManager::removeSections(QVector<int> indexes)
+{
+    QVector<QExeSectionPtr> ret;
+    for (int i = 0; i < indexes.size(); i++) {
+        int index = indexes[i];
+        if (index < 0 || index >= sections.size()) {
+            ret[i] = nullptr;
+            continue;
+        }
+        ret[i] = sections[i];
+        sections[i] = nullptr;
+    }
+    sections.removeAll(nullptr);
+    return ret;
+}
+
 QExeSectionPtr QExeSectionManager::removeSection(const QLatin1String &name)
 {
     return removeSection(sectionIndexByName(name));
+}
+
+QVector<QExeSectionPtr> QExeSectionManager::removeSections(QVector<QLatin1String> names)
+{
+    QVector<QExeSectionPtr> ret;
+    QLatin1String name;
+    foreach (name, names)
+        ret += removeSection(name);
+    return ret;
 }
 
 QExeSectionPtr QExeSectionManager::createSection(const QLatin1String &name, quint32 size)

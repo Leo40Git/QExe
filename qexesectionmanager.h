@@ -24,9 +24,16 @@ public:
     QExeSectionPtr sectionAt(int index) const;
     int sectionIndexByName(const QLatin1String &name) const;
     QExeSectionPtr sectionWithName(const QLatin1String &name) const;
+    bool containsSection(QExeSectionPtr sec) const;
+    QVector<bool> containsSections(QVector<QExeSectionPtr> secs) const;
     bool addSection(QExeSectionPtr newSec);
+    QVector<bool> addSections(QVector<QExeSectionPtr> newSecs);
+    bool removeSection(QExeSectionPtr sec);
+    QVector<bool> removeSections(QVector<QExeSectionPtr> secs);
     QExeSectionPtr removeSection(int index);
+    QVector<QExeSectionPtr> removeSections(QVector<int> indexes);
     QExeSectionPtr removeSection(const QLatin1String &name);
+    QVector<QExeSectionPtr> removeSections(QVector<QLatin1String> names);
     QExeSectionPtr createSection(const QLatin1String &name, quint32 size);
     QBuffer *setupRVAPoint(quint32 rva, QIODevice::OpenMode mode) const;
 private:

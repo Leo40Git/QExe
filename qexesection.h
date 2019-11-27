@@ -55,6 +55,8 @@ public:
     };
     Q_DECLARE_FLAGS(Characteristics, Characteristic)
     Q_FLAG(Characteristics)
+    explicit QExeSection(QObject *parent = nullptr);
+    explicit QExeSection(const QLatin1String &name, quint32 size, QObject *parent = nullptr);
     bool linearize;
     QLatin1String name() const;
     void setName(const QLatin1String &name);
@@ -69,8 +71,6 @@ public:
 private:
     friend class QExeSectionManager;
 
-    explicit QExeSection(QObject *parent = nullptr);
-    explicit QExeSection(const QLatin1String &name, quint32 size, QObject *parent = nullptr);
     QByteArray nameBytes;
     quint32 rawDataPtr;
 };
