@@ -274,6 +274,7 @@ QExeSectionPtr QExe::createFillerSection(int num, quint32 addr, quint32 size)
     QExeSectionPtr newSec = QExeSectionPtr(new QExeSection(QLatin1String(nameSrc.toLatin1()), size));
     newSec->virtualAddr = addr;
     newSec->characteristics = fillerChrs;
+    newSec->rawData.resize(0);
     return newSec;
 }
 
