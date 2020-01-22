@@ -233,8 +233,7 @@ void QExeSectionManager::write(QIODevice &dst)
     // write section headers
     QByteArray buf16(sizeof(quint16), 0);
     QByteArray buf32(sizeof(quint32), 0);
-    for (int i = 0; i < sections.size(); i++) {
-        section = sections[i];
+    foreach (section, sections) {
         dst.write(section->nameBytes);
         qToLittleEndian<quint32>(section->virtualSize, buf32.data());
         dst.write(buf32);
@@ -256,8 +255,10 @@ void QExeSectionManager::write(QIODevice &dst)
         dst.write(buf32);
     }
     // write section data
-    for (int i = 0; i < sections.size(); i++) {
+    foreach (section, sections) {
         section = sections[i];
+        if (section->rawData.size() == 0)
+            continue;
         dst.seek(section->rawDataPtr);
         dst.write(section->rawData);
     }
@@ -326,6 +327,11 @@ bool QExeSectionManager::test(bool justOrderAndOverlap, quint32 *fileSize, QExeE
             if (section->linearize != (i == 0))
                 continue;
             quint32 rawDataSize = static_cast<quint32>(section->rawData.size());
+            if (rawDataSize == 0) {
+                // don't bother with this section
+                section->rawDataPtr = 0;
+                continue;
+            }
             bool ok = false;
             if (section->linearize) {
                 if (QExe::alignForward(section->virtualAddr, fileAlign) != section->virtualAddr) {
