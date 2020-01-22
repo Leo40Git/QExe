@@ -44,7 +44,7 @@ public:
     QExeRsrcEntryPtr child(quint32 id) const;
     QExeRsrcEntryPtr removeChild(const QString &name);
     QExeRsrcEntryPtr removeChild(quint32 id);
-    void removeAllChildren();
+    QLinkedList<QExeRsrcEntryPtr> removeAllChildren();
     QList<QExeRsrcEntryPtr> fromPath(const QString &path) const;
 private:
     friend class QExeRsrcManager;

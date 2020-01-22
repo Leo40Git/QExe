@@ -93,9 +93,11 @@ QExeRsrcEntryPtr QExeRsrcEntry::removeChild(quint32 id)
     return entry;
 }
 
-void QExeRsrcEntry::removeAllChildren()
+QLinkedList<QExeRsrcEntryPtr> QExeRsrcEntry::removeAllChildren()
 {
+	QLinkedList<QExeRsrcEntryPtr> ret = QLinkedList<QExeRsrcEntryPtr>(m_children);
     m_children.clear();
+	return ret;
 }
 
 QList<QExeRsrcEntryPtr> QExeRsrcEntry::fromPath(const QString &path) const
