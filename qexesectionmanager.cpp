@@ -188,80 +188,61 @@ QExeSectionManager::QExeSectionManager(QExe *exeDat, QObject *parent) : QObject(
     this->exeDat = exeDat;
 }
 
-void QExeSectionManager::read(QIODevice &src)
+bool QExeSectionManager::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *errinfo)
 {
+    (void)errinfo;
     sections.clear();
 
-    QByteArray buf16(sizeof(quint16), 0);
-    QByteArray buf32(sizeof(quint32), 0);
-    qint64 prev = 0;
-
     quint32 sectionCount = exeDat->coffHeader()->sectionCount;
+    quint32 rawDataSize;
+    qint64 prev = 0;
     for (quint32 i = 0; i < sectionCount; i++) {
         QExeSectionPtr newSec = QExeSectionPtr(new QExeSection());
         newSec->nameBytes = src.read(8);
-        src.read(buf32.data(), sizeof(quint32));
-        newSec->virtualSize = qFromLittleEndian<quint32>(buf32.data());
-        src.read(buf32.data(), sizeof(quint32));
-        newSec->virtualAddr = qFromLittleEndian<quint32>(buf32.data());
-        src.read(buf32.data(), sizeof(quint32));
-        quint32 rawDataSize = qFromLittleEndian<quint32>(buf32.data());
-        src.read(buf32.data(), sizeof(quint32));
-        newSec->rawDataPtr = qFromLittleEndian<quint32>(buf32.data());
+        ds >> newSec->virtualSize;
+        ds >> newSec->virtualAddr;
+        ds >> rawDataSize;
+        ds >> newSec->rawDataPtr;
         newSec->linearize = newSec->virtualAddr == newSec->rawDataPtr;
         prev = src.pos();
         src.seek(newSec->rawDataPtr);
         newSec->rawData = src.read(rawDataSize);
         src.seek(prev);
-        src.read(buf32.data(), sizeof(quint32));
-        newSec->relocsPtr = qFromLittleEndian<quint32>(buf32.data());
-        src.read(buf32.data(), sizeof(quint32));
-        newSec->linenumsPtr = qFromLittleEndian<quint32>(buf32.data());
-        src.read(buf16.data(), sizeof(quint16));
-        newSec->relocsCount = qFromLittleEndian<quint16>(buf16.data());
-        src.read(buf16.data(), sizeof(quint16));
-        newSec->linenumsCount = qFromLittleEndian<quint16>(buf32.data());
-        src.read(buf32.data(), sizeof(quint32));
-        newSec->characteristics = QExeSection::Characteristics(qFromLittleEndian<quint32>(buf32.data()));
+        ds >> newSec->relocsPtr;
+        ds >> newSec->linenumsPtr;
+        ds >> newSec->relocsCount;
+        ds >> newSec->linenumsCount;
+        ds >> newSec->characteristics;
         sections += newSec;
     }
+    return true;
 }
 
-void QExeSectionManager::write(QIODevice &dst)
+bool QExeSectionManager::write(QIODevice &dst, QDataStream &ds, QExeErrorInfo *errinfo)
 {
+    (void)errinfo;
     QExeSectionPtr section;
     // write section headers
-    QByteArray buf16(sizeof(quint16), 0);
-    QByteArray buf32(sizeof(quint32), 0);
     foreach (section, sections) {
         dst.write(section->nameBytes);
-        qToLittleEndian<quint32>(section->virtualSize, buf32.data());
-        dst.write(buf32);
-        qToLittleEndian<quint32>(section->virtualAddr, buf32.data());
-        dst.write(buf32);
-        qToLittleEndian<quint32>(static_cast<quint32>(section->rawData.size()), buf32.data());
-        dst.write(buf32);
-        qToLittleEndian<quint32>(section->rawDataPtr, buf32.data());
-        dst.write(buf32);
-        qToLittleEndian<quint32>(section->relocsPtr, buf32.data());
-        dst.write(buf32);
-        qToLittleEndian<quint32>(section->linenumsPtr, buf32.data());
-        dst.write(buf32);
-        qToLittleEndian<quint16>(section->relocsCount, buf16.data());
-        dst.write(buf16);
-        qToLittleEndian<quint16>(section->linenumsCount, buf16.data());
-        dst.write(buf16);
-        qToLittleEndian<quint32>(section->characteristics, buf32.data());
-        dst.write(buf32);
+        ds << section->virtualSize;
+        ds << section->virtualAddr;
+        ds << static_cast<quint32>(section->rawData.size());
+        ds << section->rawDataPtr;
+        ds << section->relocsPtr;
+        ds << section->linenumsPtr;
+        ds << section->relocsCount;
+        ds << section->linenumsCount;
+        ds << section->characteristics;
     }
     // write section data
     foreach (section, sections) {
-        section = sections[i];
         if (section->rawData.size() == 0)
             continue;
         dst.seek(section->rawDataPtr);
         dst.write(section->rawData);
     }
+    return true;
 }
 
 bool sectionVALessThan(const QSharedPointer<QExeSection> &s1, const QSharedPointer<QExeSection> &s2) {

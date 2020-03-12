@@ -59,36 +59,46 @@ bool QExe::read(QIODevice &src, QExeErrorInfo *errinfo)
         SET_ERROR_INFO(BadIODevice_Sequential)
         return false;
     }
+    QDataStream ds(&src);
+    ds.setByteOrder(QDataStream::LittleEndian);
 
+    // read MZ signature
+    src.seek(0);
+    quint16 sigMZ;
+    ds >> sigMZ;
+    if (sigMZ != 0x4D5A) { // "MZ"
+        if (errinfo != nullptr) {
+            errinfo->errorID = QExeErrorInfo::BadPEFile_InvalidSignatureMZ;
+            errinfo->details += sigMZ;
+        }
+        return false;
+    }
     // read DOS stub size
     src.seek(0x3C);
-    QByteArray dosSzBuf = src.read(sizeof(quint32));
-    qint64 dosSz = qFromLittleEndian<quint32>(dosSzBuf.data());
+    quint32 szDosStub;
+    ds >> szDosStub;
     // read DOS stub
     src.seek(0);
-    m_dosStub->data = src.read(dosSz);
-    // read signature (should be "PE\0\0")
-    QByteArray sig = src.read(4);
-    if (sig[0] != 'P' || sig[1] != 'E' || sig[2] != '\0' || sig[3] != '\0') { // curse you, null terminator
+    m_dosStub->data = src.read(szDosStub);
+    // read PE signature
+    quint64 sigPE;
+    ds >> sigPE;
+    if (sigPE != 0x50450000) { // "PE\0\0"
         if (errinfo != nullptr) {
-            errinfo->errorID = QExeErrorInfo::BadPEFile_InvalidSignature;
-            errinfo->details += QChar(sig[0]);
-            errinfo->details += QChar(sig[1]);
-            errinfo->details += QChar(sig[2]);
-            errinfo->details += QChar(sig[3]);
+            errinfo->errorID = QExeErrorInfo::BadPEFile_InvalidSignaturePE;
+            errinfo->details += sigPE;
         }
         return false;
     }
     // read COFF header
-    QByteArray coffDat = src.read(0x14);
-    if (!m_coffHead->read(coffDat, errinfo))
+    if (!m_coffHead->read(src, ds, errinfo))
         return false;
     // read optional header
-    QByteArray optDat = src.read(m_coffHead->optHeadSize);
-    if (!m_optHead->read(optDat, errinfo))
+    if (!m_optHead->read(src, ds, errinfo))
         return false;
-    // section manager taking over to read sections
-    m_secMgr->read(src);
+    // read sections
+    if (!m_secMgr->read(src, ds, errinfo))
+        return false;
 
     if (m_autoCreateRsrcManager)
         if (createRsrcManager(errinfo) == nullptr)
@@ -108,6 +118,8 @@ bool QExe::write(QIODevice &dst, QExeErrorInfo *errinfo)
         SET_ERROR_INFO(BadIODevice_Sequential)
         return false;
     }
+    QDataStream ds(&dst);
+    ds.setByteOrder(QDataStream::LittleEndian);
 
     // make sure everyone's up to date & calculate expected file size
     quint32 fileSize;
@@ -116,17 +128,17 @@ bool QExe::write(QIODevice &dst, QExeErrorInfo *errinfo)
 
     // write DOS stub
     dst.write(m_dosStub->data);
-    // write "PE\0\0" signature
-    dst.putChar('P');
-    dst.putChar('E');
-    dst.putChar(0);
-    dst.putChar(0);
+    // write PE signature
+    ds << static_cast<quint64>(0x50450000);
     // write COFF header
-    dst.write(m_coffHead->toBytes());
+    if (!m_coffHead->write(dst, ds, errinfo))
+        return false;
     // write optional header
-    dst.write(m_optHead->toBytes());
-    // section manager taking over to write sections
-    m_secMgr->write(dst);
+    if (!m_optHead->write(dst, ds, errinfo))
+        return false;
+    // write sections
+    if (!m_secMgr->write(dst, ds, errinfo))
+        return false;
 
     // pad EXE to expected file size
     int padSize = static_cast<int>(fileSize - dst.pos());

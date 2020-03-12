@@ -38,15 +38,12 @@ public:
     QBuffer *setupRVAPoint(quint32 rva, QIODevice::OpenMode mode) const;
 private:
     friend class QExe;
-    friend class QExeDOSStub;
-    friend class QExeCOFFHeader;
-    friend class QExeOptionalHeader;
 
     explicit QExeSectionManager(QExe *exeDat, QObject *parent = nullptr);
     QExe *exeDat;
     QVector<QExeSectionPtr> sections;
-    void read(QIODevice &src);
-    void write(QIODevice &dst);
+    bool read(QIODevice &src, QDataStream &ds, QExeErrorInfo *errinfo);
+    bool write(QIODevice &dst, QDataStream &ds, QExeErrorInfo *errinfo);
     bool test(bool justOrderAndOverlap, quint32 *fileSize = nullptr, QExeErrorInfo *errinfo = nullptr);
     void positionSection(QExeSectionPtr newSec, quint32 i, quint32 sectionAlign);
     int rsrcSectionIndex();

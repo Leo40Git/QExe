@@ -2,6 +2,7 @@
 #define QEXEHEADER_H
 
 #include <QObject>
+#include <QIODevice>
 
 #include "QExe_global.h"
 #include "qexeerrorinfo.h"
@@ -73,13 +74,12 @@ public:
 
 private:
     friend class QExe;
-    friend class QExeOptionalHeader;
     friend class QExeSectionManager;
 
     explicit QExeCOFFHeader(QExe *exeDat, QObject *parent = nullptr);
     QExe *exeDat;
-    bool read(QByteArray src, QExeErrorInfo *errinfo);
-    QByteArray toBytes();
+    bool read(QIODevice &src, QDataStream &ds, QExeErrorInfo *errinfo);
+    bool write(QIODevice &dst, QDataStream &ds, QExeErrorInfo *errinfo);
     // managed by QExe
     quint16 sectionCount;
     quint16 optHeadSize;

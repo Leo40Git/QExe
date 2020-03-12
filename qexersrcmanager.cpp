@@ -42,8 +42,10 @@ bool QExeRsrcManager::read(QExeSectionPtr sec, QExeErrorInfo *errinfo)
 {
     QBuffer buf(&sec->rawData);
     buf.open(QBuffer::ReadOnly);
+    QDataStream ds(&buf);
+    ds.setByteOrder(QDataStream::LittleEndian);
     m_root->removeAllChildren();
-    if (!readDirectory(buf, m_root, sec->virtualAddr)) {
+    if (!readDirectory(buf, ds, m_root, sec->virtualAddr)) {
         SET_ERROR_INFO(BadRsrc_InvalidFormat)
         return false;
     }
@@ -69,7 +71,7 @@ public:
     }
 };
 
-class QExeRsrcManager::ReferenceMemory {
+class QExeRsrcManager::SymbolTable {
 public:
     QMap<QExeRsrcEntryPtr, quint32> directoryOffs;
     QMap<QExeRsrcEntryPtr, QList<qint64>> directoryRefs;
@@ -79,48 +81,41 @@ public:
 
 void QExeRsrcManager::toSection()
 {
-    ReferenceMemory refMem;
+    SymbolTable symTbl;
     SectionSizes sizes = calculateSectionSizes(m_root);
     QExeSectionPtr sec = exeDat->sectionManager()->createSection(QLatin1String(".rsrc"), sizes.totalSize());
     sec->characteristics = QExeSection::ContainsInitializedData | QExeSection::IsReadable;
     QBuffer buf(&sec->rawData);
     buf.open(QBuffer::WriteOnly);
-    writeDirectory(buf, m_root, refMem);
-    writeReferences(buf, sizes, refMem, sec->virtualAddr);
+    QDataStream ds(&buf);
+    ds.setByteOrder(QDataStream::LittleEndian);
+    writeDirectory(buf, ds, m_root, symTbl);
+    writeReferences(buf, ds, sizes, symTbl, sec->virtualAddr);
     buf.close();
 }
 
-bool QExeRsrcManager::readDirectory(QBuffer &src, QExeRsrcEntryPtr dir, quint32 offset) {
-    QByteArray buf16(sizeof(quint16), 0);
-    QByteArray buf32(sizeof(quint32), 0);
-    src.read(buf32.data(), sizeof(quint32));
-    dir->directoryMeta.characteristics = qFromLittleEndian<quint32>(buf32.data());
-    src.read(buf32.data(), sizeof(quint32));
-    dir->directoryMeta.timestamp = qFromLittleEndian<quint32>(buf32.data());
-    src.read(buf16.data(), sizeof(quint16));
-    dir->directoryMeta.version.first = qFromLittleEndian<quint16>(buf16.data());
-    src.read(buf16.data(), sizeof(quint16));
-    dir->directoryMeta.version.second = qFromLittleEndian<quint16>(buf16.data());
-    src.read(buf16.data(), sizeof(quint16));
-    quint16 entries = qFromLittleEndian<quint16>(buf16.data());
-    src.read(buf16.data(), sizeof(quint16));
-    entries += qFromLittleEndian<quint16>(buf16.data());
+bool QExeRsrcManager::readDirectory(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr dir, quint32 offset) {
+    ds >> dir->directoryMeta.characteristics;
+    ds >> dir->directoryMeta.timestamp;
+    ds >> dir->directoryMeta.version;
+    quint16 entriesName, entriesID;
+    ds >> entriesName;
+    ds >> entriesID;
+    quint16 entries = entriesName + entriesID;
     for (quint32 i = 0; i < entries; i++)
-        if (!readEntry(src, dir, offset)) {
+        if (!readEntry(src, ds, dir, offset)) {
             return false;
         }
     return true;
 }
 
-bool QExeRsrcManager::readEntry(QBuffer &src, QExeRsrcEntryPtr dir, quint32 offset)
+bool QExeRsrcManager::readEntry(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr dir, quint32 offset)
 {
     QExeRsrcEntryPtr child = QExeRsrcEntryPtr(new QExeRsrcEntry(QExeRsrcEntry::Data));
 
-    QByteArray buf16(sizeof(quint16), 0);
-    QByteArray buf32(sizeof(quint32), 0);
     // read name/ID
-    src.read(buf32.data(), sizeof(quint32));
-    quint32 nameOff = qFromLittleEndian<quint32>(buf32.data());
+    quint32 nameOff;
+    ds >> nameOff;
     qint64 prevPos = src.pos();
     if ((nameOff & hiMask) == 0)
         // id
@@ -129,27 +124,25 @@ bool QExeRsrcManager::readEntry(QBuffer &src, QExeRsrcEntryPtr dir, quint32 offs
         // name
         nameOff &= ~hiMask;
         src.seek(nameOff);
-        src.read(buf16.data(), sizeof(quint16));
-        quint16 nameLen = qFromLittleEndian<quint16>(buf16.data());
+        quint16 nameLen;
+        ds >> nameLen;
         QByteArray nameBytes = src.read(nameLen * 2);
         child->name = QTextCodec::codecForName("UTF-16LE")->makeDecoder(QTextCodec::IgnoreHeader)->toUnicode(nameBytes);
         src.seek(prevPos);
     }
     // read data/directory
-    src.read(buf32.data(), sizeof(quint32));
-    quint32 dataOff = qFromLittleEndian<quint32>(buf32.data());
+    quint32 dataOff;
+    ds >> dataOff;
     prevPos = src.pos();
     if ((dataOff & hiMask) == 0) {
         // data
         src.seek(dataOff);
-        src.read(buf32.data(), sizeof(quint32));
-        quint32 dataPtr = qFromLittleEndian<quint32>(buf32.data()) - offset;
-        src.read(buf32.data(), sizeof(quint32));
-        quint32 dataSize = qFromLittleEndian<quint32>(buf32.data());
-        src.read(buf32.data(), sizeof(quint32));
-        child->dataMeta.codepage = qFromLittleEndian<quint32>(buf32.data());
-        src.read(buf32.data(), sizeof(quint32));
-        child->dataMeta.reserved = qFromLittleEndian<quint32>(buf32.data());
+        quint32 dataPtr;
+        ds >> dataPtr;
+        quint32 dataSize;
+        ds >> dataSize;
+        ds >> child->dataMeta.codepage;
+        ds >> child->dataMeta.reserved;
         src.seek(dataPtr);
         child->data = src.read(dataSize);
     } else {
@@ -157,7 +150,7 @@ bool QExeRsrcManager::readEntry(QBuffer &src, QExeRsrcEntryPtr dir, quint32 offs
         dataOff &= ~hiMask;
         child->m_type = QExeRsrcEntry::Directory;
         src.seek(dataOff);
-        if (!readDirectory(src, child, offset)) {
+        if (!readDirectory(src, ds, child, offset)) {
             return false;
         }
     }
@@ -192,20 +185,13 @@ QExeRsrcManager::SectionSizes QExeRsrcManager::calculateSectionSizes(QExeRsrcEnt
     return sz;
 }
 
-void QExeRsrcManager::writeDirectory(QBuffer &dst, QExeRsrcEntryPtr dir, QExeRsrcManager::ReferenceMemory &refMem)
+void QExeRsrcManager::writeDirectory(QBuffer &dst, QDataStream &ds, QExeRsrcEntryPtr dir, QExeRsrcManager::SymbolTable &symTbl)
 {
-    refMem.directoryOffs[dir] = static_cast<quint32>(dst.pos());
-    QByteArray buf16(sizeof(quint16), 0);
-    QByteArray buf32(sizeof(quint32), 0);
+    symTbl.directoryOffs[dir] = static_cast<quint32>(dst.pos());
     // write unimportant fields
-    qToLittleEndian<quint32>(dir->directoryMeta.characteristics, buf32.data());
-    dst.write(buf32);
-    qToLittleEndian<quint32>(dir->directoryMeta.timestamp, buf32.data());
-    dst.write(buf32);
-    qToLittleEndian<quint16>(dir->directoryMeta.version.first, buf16.data());
-    dst.write(buf16);
-    qToLittleEndian<quint16>(dir->directoryMeta.version.second, buf16.data());
-    dst.write(buf16);
+    ds << dir->directoryMeta.characteristics;
+    ds << dir->directoryMeta.timestamp;
+    ds << dir->directoryMeta.version;
     // first romp to count name/ID entries
     QLinkedList<QExeRsrcEntryPtr> entriesName, entriesID;
     quint16 entryCountName = 0, entryCountID = 0;
@@ -220,60 +206,50 @@ void QExeRsrcManager::writeDirectory(QBuffer &dst, QExeRsrcEntryPtr dir, QExeRsr
         }
     }
     // write em out
-    qToLittleEndian<quint16>(entryCountName, buf16.data());
-    dst.write(buf16);
-    qToLittleEndian<quint16>(entryCountID, buf16.data());
-    dst.write(buf16);
+    ds << entryCountName;
+    ds << entryCountID;
     // second romp to actually write entries
     // make a subdir list to write *after* writing directory
     QLinkedList<QExeRsrcEntryPtr> subdirs;
-    writeEntries(dst, entriesName, subdirs, refMem);
-    writeEntries(dst, entriesID, subdirs, refMem);
+    writeEntries(dst, ds, entriesName, subdirs, symTbl);
+    writeEntries(dst, ds, entriesID, subdirs, symTbl);
     // now write subdirs
     foreach (entry, subdirs)
-        writeDirectory(dst, entry, refMem);
+        writeDirectory(dst, ds, entry, symTbl);
 }
 
-void QExeRsrcManager::writeEntries(QBuffer &dst, QLinkedList<QExeRsrcEntryPtr> entries, QLinkedList<QExeRsrcEntryPtr> &subdirs, QExeRsrcManager::ReferenceMemory &refMem)
+void QExeRsrcManager::writeEntries(QBuffer &dst, QDataStream &ds, QLinkedList<QExeRsrcEntryPtr> entries, QLinkedList<QExeRsrcEntryPtr> &subdirs, QExeRsrcManager::SymbolTable &symTbl)
 {
-    QByteArray buf16(sizeof(quint16), 0);
-    QByteArray buf32(sizeof(quint32), 0);
     QExeRsrcEntryPtr entry;
     foreach (entry, entries) {
         if (entry->name.isEmpty()) {
-            qToLittleEndian<quint32>(entry->id, buf32.data());
-            dst.write(buf32);
+            ds << entry->id;
         } else {
-            refMem.stringRefs[entry->name] += dst.pos();
-            qToLittleEndian<quint32>(~hiMask, buf32.data());
-            dst.write(buf32);
+            symTbl.stringRefs[entry->name] += dst.pos();
+            ds << ~hiMask;
         }
         if (entry->type() == QExeRsrcEntry::Data) {
-            refMem.dataEntryRefs[entry] += dst.pos();
-            qToLittleEndian<quint32>(0, buf32.data());
-            dst.write(buf32);
+            symTbl.dataEntryRefs[entry] += dst.pos();
+            ds << static_cast<quint32>(0);
         } else {
-            refMem.directoryRefs[entry] += dst.pos();
+            symTbl.directoryRefs[entry] += dst.pos();
             subdirs += entry;
-            qToLittleEndian<quint32>(~hiMask, buf32.data());
-            dst.write(buf32);
+            ds << ~hiMask;
         }
     }
 }
 
-void QExeRsrcManager::writeReferences(QBuffer &dst, QExeRsrcManager::SectionSizes sizes, QExeRsrcManager::ReferenceMemory &refMem, quint32 offset)
+void QExeRsrcManager::writeReferences(QBuffer &dst, QDataStream &ds, QExeRsrcManager::SectionSizes sizes, QExeRsrcManager::SymbolTable &refMem, quint32 offset)
 {
-    QByteArray buf16(sizeof(quint16), 0);
-    QByteArray buf32(sizeof(quint32), 0);
     // write directroy references
     QMapIterator<QExeRsrcEntryPtr, QList<qint64>> dirRefsI(refMem.directoryRefs);
     while (dirRefsI.hasNext()) {
         dirRefsI.next();
-        qToLittleEndian<quint32>(refMem.directoryOffs[dirRefsI.key()] | hiMask, buf32.data());
+        quint32 v = refMem.directoryOffs[dirRefsI.key()] | hiMask;
         qint64 pos;
         foreach (pos, dirRefsI.value()) {
             dst.seek(pos);
-            dst.write(buf32);
+            ds << v;
         }
     }
     // write actual data, remember offsets
@@ -291,23 +267,18 @@ void QExeRsrcManager::writeReferences(QBuffer &dst, QExeRsrcManager::SectionSize
     while (dataEntryRefsI.hasNext()) {
         dataEntryRefsI.next();
         quint32 prevPos = static_cast<quint32>(dst.pos());
-        qToLittleEndian<quint32>(prevPos, buf32.data());
         qint64 pos;
         foreach (pos, dataEntryRefsI.value()) {
             dst.seek(pos);
-            dst.write(buf32);
+            ds << prevPos;
         }
         dst.seek(prevPos);
         QExeRsrcEntryPtr entry = dataEntryRefsI.key();
         quint32 dataPtr = dataPtrs[entry];
-        qToLittleEndian<quint32>(dataPtr, buf32.data());
-        dst.write(buf32);
-        qToLittleEndian<quint32>(static_cast<quint32>(entry->data.size()), buf32.data());
-        dst.write(buf32);
-        qToLittleEndian<quint32>(entry->dataMeta.codepage, buf32.data());
-        dst.write(buf32);
-        qToLittleEndian<quint32>(entry->dataMeta.reserved, buf32.data());
-        dst.write(buf32);
+        ds << dataPtr;
+        ds << static_cast<quint32>(entry->data.size());
+        ds << entry->dataMeta.codepage;
+        ds << entry->dataMeta.reserved;
     }
     // write strings and their references
     QTextEncoder *encoder = QTextCodec::codecForName("UTF-16LE")->makeEncoder(QTextCodec::IgnoreHeader);
@@ -316,16 +287,15 @@ void QExeRsrcManager::writeReferences(QBuffer &dst, QExeRsrcManager::SectionSize
     while (stringRefsI.hasNext()) {
         stringRefsI.next();
         quint32 prevPos = static_cast<quint32>(dst.pos());
-        qToLittleEndian<quint32>(prevPos | hiMask, buf32.data());
+        quint32 v = prevPos | hiMask;
         qint64 pos;
         foreach (pos, stringRefsI.value()) {
             dst.seek(pos);
-            dst.write(buf32);
+            ds << v;
         }
         dst.seek(prevPos);
         QString str = stringRefsI.key();
-        qToLittleEndian<quint16>(static_cast<quint16>(str.size()), buf16.data());
-        dst.write(buf16);
+        ds << static_cast<quint16>(str.size());
         dst.write(encoder->fromUnicode(str));
     }
 }

@@ -17,7 +17,8 @@ public:
         BadIODevice_Sequential,
         BadIODevice_Unwritable,
         // BadPEFile
-        BadPEFile_InvalidSignature = 1 * 0x100,
+        BadPEFile_InvalidSignatureMZ = 1 * 0x100,
+        BadPEFile_InvalidSignaturePE,
         BadPEFile_InvalidSectionCount,
         BadPEFile_InvalidMagic,
         // BadSection
