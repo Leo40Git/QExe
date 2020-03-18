@@ -118,10 +118,36 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
+
+    /*
     if (rsrcMgr) {
         OUT << " == Printing .rsrc section contents (root directory) == ";
         rsrcPrintDirectory(QString(""), rsrcMgr->root());
     }
+    */
+
+    /*
+    OUT << " == Dumping Dialog/DLG_ABOUT to a file ==";
+    QExeRsrcEntryPtr dialogDir = rsrcMgr->root()->child(QExeRsrcEntry::Dialog);
+    QExeRsrcEntryPtr dlgAbout = dialogDir->child("DLG_ABOUT");
+    if (!dlgAbout)
+        OUT << "DLG_ABOUT don't bloody exist";
+    else if (dlgAbout->type() != QExeRsrcEntry::Directory)
+        OUT << "DLG_ABOUT ain't a fookin directory";
+    else {
+        QLinkedList<QExeRsrcEntryPtr> dlgAboutC = dlgAbout->children();
+        if (dlgAboutC.size() != 1)
+            OUT << "DLG_ABOUT don't have only 1 child, the git";
+        else {
+            QExeRsrcEntryPtr dlgAboutData = dlgAboutC.first();
+            QFile outAboutData(QString("%1/DLG_ABOUT.bin").arg(testDir.absolutePath()));
+            outAboutData.open(QFile::WriteOnly);
+            outAboutData.write(dlgAboutData->data);
+            outAboutData.close();
+            OUT << "Threw DLG_ABOUT into \"" << outAboutData.fileName() << "\"";
+        }
+    }
+    */
 
     QFile outNew(QString("%1/Doukutsu.out.exe").arg(testDir.absolutePath()));
     outNew.open(QFile::WriteOnly);

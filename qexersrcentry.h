@@ -18,7 +18,7 @@ class QEXE_EXPORT QExeRsrcEntry : public QObject
 {
     Q_OBJECT
 public:
-    enum RootDirectory {
+    enum RootDirectory : quint32 {
         Cursor = 0x1,
         Bitmap,
         Icon,

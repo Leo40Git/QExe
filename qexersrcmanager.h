@@ -33,7 +33,7 @@ private:
     class SymbolTable;
     void writeDirectory(QBuffer &dst, QDataStream &ds, QExeRsrcEntryPtr dir, SymbolTable &refMem);
     void writeEntries(QBuffer &dst, QDataStream &ds, QLinkedList<QExeRsrcEntryPtr> entries, QLinkedList<QExeRsrcEntryPtr> &subdirs, SymbolTable &refMem);
-    void writeReferences(QBuffer &dst, QDataStream &ds, SectionSizes sizes, SymbolTable &refMem, quint32 offset);
+    void writeSymbols(QBuffer &dst, QDataStream &ds, SectionSizes sizes, SymbolTable &refMem, quint32 offset);
     QExe *exeDat;
     QExeRsrcEntryPtr m_root;
 };

@@ -79,18 +79,36 @@ public:
     QMap<QString, QList<qint64>> stringRefs;
 };
 
+#include <QDebug>
+#define OUT qDebug().noquote().nospace()
+#define HEX(n) "0x" << QString::number(n, 16).toUpper()
+
+inline QString entryID(QExeRsrcEntryPtr e) {
+    if (e->name.isEmpty())
+        return QString("0x%1").arg(QString::number(e->id, 16).toUpper());
+    else
+        return e->name;
+}
+
 void QExeRsrcManager::toSection()
 {
     SymbolTable symTbl;
+    OUT << "ROMP 0: Calculating section sizes";
     SectionSizes sizes = calculateSectionSizes(m_root);
+    OUT << "Directory size: " << HEX(sizes.directorySize);
+    OUT << "Data entry size: " << HEX(sizes.dataEntrySize);
+    OUT << "String table size: " << HEX(sizes.stringSize);
+    OUT << "Data size: " << HEX(sizes.dataSize);
     QExeSectionPtr sec = exeDat->sectionManager()->createSection(QLatin1String(".rsrc"), sizes.totalSize());
     sec->characteristics = QExeSection::ContainsInitializedData | QExeSection::IsReadable;
     QBuffer buf(&sec->rawData);
     buf.open(QBuffer::WriteOnly);
     QDataStream ds(&buf);
     ds.setByteOrder(QDataStream::LittleEndian);
+    OUT << "ROMP 1: Writing directories";
     writeDirectory(buf, ds, m_root, symTbl);
-    writeReferences(buf, ds, sizes, symTbl, sec->virtualAddr);
+    OUT << "ROMP 2: Writing symbols";
+    writeSymbols(buf, ds, sizes, symTbl, sec->virtualAddr);
     buf.close();
 }
 
@@ -189,6 +207,7 @@ QExeRsrcManager::SectionSizes QExeRsrcManager::calculateSectionSizes(QExeRsrcEnt
 
 void QExeRsrcManager::writeDirectory(QBuffer &dst, QDataStream &ds, QExeRsrcEntryPtr dir, QExeRsrcManager::SymbolTable &symTbl)
 {
+    OUT << "Writing directory " << entryID(dir) << " (" << dir.data() << ")";
     symTbl.directoryOffs[dir] = static_cast<quint32>(dst.pos());
     // write unimportant fields
     ds << dir->directoryMeta.characteristics;
@@ -208,14 +227,17 @@ void QExeRsrcManager::writeDirectory(QBuffer &dst, QDataStream &ds, QExeRsrcEntr
         }
     }
     // write em out
+    OUT << "Entries: " << HEX(entryCountName) << " named, " << HEX(entryCountID) << " ID'd";
     ds << entryCountName;
     ds << entryCountID;
     // second romp to actually write entries
     // make a subdir list to write *after* writing directory
+    OUT << "Writing entries";
     QLinkedList<QExeRsrcEntryPtr> subdirs;
     writeEntries(dst, ds, entriesName, subdirs, symTbl);
     writeEntries(dst, ds, entriesID, subdirs, symTbl);
     // now write subdirs
+    OUT << "Writing subdirectories";
     foreach (entry, subdirs)
         writeDirectory(dst, ds, entry, symTbl);
 }
@@ -224,6 +246,7 @@ void QExeRsrcManager::writeEntries(QBuffer &dst, QDataStream &ds, QLinkedList<QE
 {
     QExeRsrcEntryPtr entry;
     foreach (entry, entries) {
+        OUT << "Writing entry " << entryID(entry) << " (" << entry.data() << ")";
         if (entry->name.isEmpty()) {
             ds << entry->id;
         } else {
@@ -241,12 +264,15 @@ void QExeRsrcManager::writeEntries(QBuffer &dst, QDataStream &ds, QLinkedList<QE
     }
 }
 
-void QExeRsrcManager::writeReferences(QBuffer &dst, QDataStream &ds, QExeRsrcManager::SectionSizes sizes, QExeRsrcManager::SymbolTable &refMem, quint32 offset)
+void QExeRsrcManager::writeSymbols(QBuffer &dst, QDataStream &ds, QExeRsrcManager::SectionSizes sizes, QExeRsrcManager::SymbolTable &refMem, quint32 offset)
 {
+    OUT << "Writing symbols";
     // write directroy references
+    OUT << "Directory references";
     QMapIterator<QExeRsrcEntryPtr, QList<qint64>> dirRefsI(refMem.directoryRefs);
     while (dirRefsI.hasNext()) {
         dirRefsI.next();
+        OUT << "Writing references to directory " << entryID(dirRefsI.key()) << " (" << dirRefsI.key().data() << ")";
         quint32 v = refMem.directoryOffs[dirRefsI.key()] | hiMask;
         qint64 pos;
         foreach (pos, dirRefsI.value()) {
@@ -255,19 +281,23 @@ void QExeRsrcManager::writeReferences(QBuffer &dst, QDataStream &ds, QExeRsrcMan
         }
     }
     // write actual data, remember offsets
+    OUT << "Data";
     QMap<QExeRsrcEntryPtr, quint32> dataPtrs;
     dst.seek(sizes.directorySize + sizes.dataEntrySize + sizes.stringSize);
     QMapIterator<QExeRsrcEntryPtr, QList<qint64>> dataEntryRefsI(refMem.dataEntryRefs);
     while (dataEntryRefsI.hasNext()) {
         dataEntryRefsI.next();
+        OUT << "Writing data for entry " << entryID(dataEntryRefsI.key()) << " (" << dataEntryRefsI.key().data() << ")";
         dataPtrs[dataEntryRefsI.key()] = static_cast<quint32>(dst.pos()) + offset;
         dst.write(dataEntryRefsI.key()->data);
     }
     // write data entries and their references
+    OUT << "Data entries";
     dst.seek(sizes.directorySize);
     dataEntryRefsI.toFront();
     while (dataEntryRefsI.hasNext()) {
         dataEntryRefsI.next();
+        OUT << "Writing data entry for entry " << entryID(dataEntryRefsI.key()) << " (" << dataEntryRefsI.key().data() << ")";
         quint32 prevPos = static_cast<quint32>(dst.pos());
         qint64 pos;
         foreach (pos, dataEntryRefsI.value()) {
@@ -283,11 +313,13 @@ void QExeRsrcManager::writeReferences(QBuffer &dst, QDataStream &ds, QExeRsrcMan
         ds << entry->dataMeta.reserved;
     }
     // write strings and their references
+    OUT << "String table";
     QTextEncoder *encoder = QTextCodec::codecForName("UTF-16LE")->makeEncoder(QTextCodec::IgnoreHeader);
     dst.seek(sizes.directorySize + sizes.dataEntrySize);
     QMapIterator<QString, QList<qint64>> stringRefsI(refMem.stringRefs);
     while (stringRefsI.hasNext()) {
         stringRefsI.next();
+        OUT << "Writing string " << stringRefsI.key();
         quint32 prevPos = static_cast<quint32>(dst.pos());
         quint32 v = prevPos | hiMask;
         qint64 pos;
