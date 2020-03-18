@@ -40,7 +40,8 @@ QExeRsrcEntryPtr QExeRsrcEntry::createChild(QExeRsrcEntry::Type type, const QStr
     QExeRsrcEntryPtr child = QExeRsrcEntryPtr(new QExeRsrcEntry(type));
     child->name = name;
     if (!addChild(child))
-        return nullptr;
+        // we already have a child with this name, so just return it
+        return this->child(name);
     return child;
 }
 
@@ -51,7 +52,8 @@ QExeRsrcEntryPtr QExeRsrcEntry::createChild(QExeRsrcEntry::Type type, quint32 id
     QExeRsrcEntryPtr child = QExeRsrcEntryPtr(new QExeRsrcEntry(type));
     child->id = id;
     if (!addChild(child))
-        return nullptr;
+        // we already have a child with this ID, so just return it
+        return this->child(id);
     return child;
 }
 

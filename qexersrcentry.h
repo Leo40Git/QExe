@@ -18,6 +18,26 @@ class QEXE_EXPORT QExeRsrcEntry : public QObject
 {
     Q_OBJECT
 public:
+    enum RootDirectory {
+        Cursor = 0x1,
+        Bitmap,
+        Icon,
+        Menu,
+        Dialog,
+        StringTable,
+        Accelerators = 0x9,
+        RCData,
+        MessageTable,
+        CursrorGroup,
+        IconGroup = 0xE,
+        VersionInfo = 0x10,
+        AniCursor = 0x15,
+        AniIcon,
+        HTML,
+        Manifest
+    };
+    Q_ENUM(RootDirectory);
+
     enum Type : bool {
         Data,
         Directory
