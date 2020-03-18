@@ -12,7 +12,7 @@ QLinkedList<QExeRsrcEntryPtr> QExeRsrcEntry::children() const
 
 bool QExeRsrcEntry::addChild(QExeRsrcEntryPtr child)
 {
-    if (child.isNull())
+    if (m_type != Directory || child.isNull())
         return false;
     QExeRsrcEntryPtr entry;
     QString childName = child->name;

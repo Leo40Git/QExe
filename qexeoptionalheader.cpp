@@ -31,7 +31,6 @@ QExeOptionalHeader::QExeOptionalHeader(QExe *exeDat, QObject *parent) : QObject(
 bool QExeOptionalHeader::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *errinfo) {
     (void)src;
     // check if this is a PE32 file
-    // TODO PE32+ support
     quint16 magic;
     ds >> magic;
     if (magic != 0x10B) {
@@ -62,7 +61,9 @@ bool QExeOptionalHeader::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *er
     ds >> headerSize;
     ds >> checksum;
     ds >> subsystem;
-    ds >> dllCharacteristics;
+    quint16 dllCharsRaw;
+    ds >> dllCharsRaw;
+    dllCharacteristics = static_cast<DLLCharacteristics>(dllCharsRaw);
     ds >> stackReserveSize;
     ds >> stackCommitSize;
     ds >> heapReserveSize;
@@ -104,7 +105,7 @@ bool QExeOptionalHeader::write(QIODevice &dst, QDataStream &ds, QExeErrorInfo *e
     ds << headerSize;
     ds << checksum;
     ds << subsystem;
-    ds << dllCharacteristics;
+    ds << static_cast<quint16>(dllCharacteristics);
     ds << stackReserveSize;
     ds << stackCommitSize;
     ds << heapReserveSize;

@@ -101,6 +101,7 @@ bool QExeRsrcManager::readDirectory(QBuffer &src, QDataStream &ds, QExeRsrcEntry
     quint16 entriesName, entriesID;
     ds >> entriesName;
     ds >> entriesID;
+
     quint16 entries = entriesName + entriesID;
     for (quint32 i = 0; i < entries; i++)
         if (!readEntry(src, ds, dir, offset)) {
@@ -113,9 +114,12 @@ bool QExeRsrcManager::readEntry(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr 
 {
     QExeRsrcEntryPtr child = QExeRsrcEntryPtr(new QExeRsrcEntry(QExeRsrcEntry::Data));
 
-    // read name/ID
     quint32 nameOff;
     ds >> nameOff;
+    quint32 dataOff;
+    ds >> dataOff;
+
+    // read name/ID
     qint64 prevPos = src.pos();
     if ((nameOff & hiMask) == 0)
         // id
@@ -131,8 +135,6 @@ bool QExeRsrcManager::readEntry(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr 
         src.seek(prevPos);
     }
     // read data/directory
-    quint32 dataOff;
-    ds >> dataOff;
     prevPos = src.pos();
     if ((dataOff & hiMask) == 0) {
         // data
@@ -143,7 +145,7 @@ bool QExeRsrcManager::readEntry(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr 
         ds >> dataSize;
         ds >> child->dataMeta.codepage;
         ds >> child->dataMeta.reserved;
-        src.seek(dataPtr);
+        src.seek(dataPtr - offset);
         child->data = src.read(dataSize);
     } else {
         // directory

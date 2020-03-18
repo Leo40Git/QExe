@@ -60,9 +60,10 @@ bool QExe::read(QIODevice &src, QExeErrorInfo *errinfo)
         return false;
     }
     QDataStream ds(&src);
-    ds.setByteOrder(QDataStream::LittleEndian);
+    //ds.setByteOrder(QDataStream::LittleEndian);
 
     // read MZ signature
+    ds.setByteOrder(QDataStream::BigEndian);
     src.seek(0);
     quint16 sigMZ;
     ds >> sigMZ;
@@ -73,6 +74,7 @@ bool QExe::read(QIODevice &src, QExeErrorInfo *errinfo)
         }
         return false;
     }
+    ds.setByteOrder(QDataStream::LittleEndian);
     // read DOS stub size
     src.seek(0x3C);
     quint32 szDosStub;
@@ -81,7 +83,8 @@ bool QExe::read(QIODevice &src, QExeErrorInfo *errinfo)
     src.seek(0);
     m_dosStub->data = src.read(szDosStub);
     // read PE signature
-    quint64 sigPE;
+    ds.setByteOrder(QDataStream::BigEndian);
+    quint32 sigPE;
     ds >> sigPE;
     if (sigPE != 0x50450000) { // "PE\0\0"
         if (errinfo != nullptr) {
@@ -90,6 +93,7 @@ bool QExe::read(QIODevice &src, QExeErrorInfo *errinfo)
         }
         return false;
     }
+    ds.setByteOrder(QDataStream::LittleEndian);
     // read COFF header
     if (!m_coffHead->read(src, ds, errinfo))
         return false;
@@ -129,7 +133,9 @@ bool QExe::write(QIODevice &dst, QExeErrorInfo *errinfo)
     // write DOS stub
     dst.write(m_dosStub->data);
     // write PE signature
-    ds << static_cast<quint64>(0x50450000);
+    ds.setByteOrder(QDataStream::BigEndian);
+    ds << static_cast<quint32>(0x50450000);
+    ds.setByteOrder(QDataStream::LittleEndian);
     // write COFF header
     if (!m_coffHead->write(dst, ds, errinfo))
         return false;

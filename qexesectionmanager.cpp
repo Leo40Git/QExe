@@ -212,7 +212,9 @@ bool QExeSectionManager::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *er
         ds >> newSec->linenumsPtr;
         ds >> newSec->relocsCount;
         ds >> newSec->linenumsCount;
-        ds >> newSec->characteristics;
+        quint32 charsRaw;
+        ds >> charsRaw;
+        newSec->characteristics = static_cast<QExeSection::Characteristics>(charsRaw);
         sections += newSec;
     }
     return true;
@@ -224,6 +226,7 @@ bool QExeSectionManager::write(QIODevice &dst, QDataStream &ds, QExeErrorInfo *e
     QExeSectionPtr section;
     // write section headers
     foreach (section, sections) {
+        section->nameBytes.resize(8);
         dst.write(section->nameBytes);
         ds << section->virtualSize;
         ds << section->virtualAddr;
@@ -233,7 +236,7 @@ bool QExeSectionManager::write(QIODevice &dst, QDataStream &ds, QExeErrorInfo *e
         ds << section->linenumsPtr;
         ds << section->relocsCount;
         ds << section->linenumsCount;
-        ds << section->characteristics;
+        ds << static_cast<quint32>(section->characteristics);
     }
     // write section data
     foreach (section, sections) {

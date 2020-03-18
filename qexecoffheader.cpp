@@ -2,11 +2,6 @@
 
 #include <QDataStream>
 
-#define SET_ERROR_INFO(errName) \
-    if (errinfo != nullptr) { \
-        errinfo->errorID = QExeErrorInfo::errName; \
-    }
-
 quint32 QExeCOFFHeader::size() const
 {
     return 0x14;
@@ -26,15 +21,19 @@ bool QExeCOFFHeader::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *errinf
     ds >> sectionCount;
     // "Note that the Windows loader limits the number of sections to 96." (https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#coff-file-header-object-and-image)
     if (sectionCount > 96) {
-        SET_ERROR_INFO(BadPEFile_InvalidSectionCount)
-        errinfo->details += sectionCount;
+        if (errinfo != nullptr) {
+            errinfo->errorID = QExeErrorInfo::BadPEFile_InvalidSectionCount;
+            errinfo->details += sectionCount;
+        }
         return false;
     }
     ds >> timestamp;
     ds >> symTblPtr;
     ds >> symTblCount;
     ds >> optHeadSize;
-    ds >> characteristics;
+    quint16 charsRaw;
+    ds >> charsRaw;
+    characteristics = static_cast<Characteristics>(charsRaw);
     return true;
 }
 
@@ -47,6 +46,6 @@ bool QExeCOFFHeader::write(QIODevice &dst, QDataStream &ds, QExeErrorInfo *errin
     ds << symTblPtr;
     ds << symTblCount;
     ds << optHeadSize;
-    ds << characteristics;
+    ds << static_cast<quint16>(characteristics);
     return true;
 }

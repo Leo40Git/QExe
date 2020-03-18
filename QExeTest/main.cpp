@@ -9,25 +9,25 @@
 #define HEX(n) "0x" << QString::number(n, 16).toUpper()
 
 void rsrcPrintDirectory(const QString &indent, QExeRsrcEntryPtr dir) {
-    OUT << indent << "\"Characteristics\" (reserved, must be 0): " << dir->directoryMeta.characteristics;
-    OUT << indent << "Timestamp: " << dir->directoryMeta.timestamp;
-    OUT << indent << "Version: " << dir->directoryMeta.version.first << "." << dir->directoryMeta.version.second;
+    OUT << indent << " \"Characteristics\" (reserved, must be 0): " << dir->directoryMeta.characteristics;
+    OUT << indent << " Timestamp: " << dir->directoryMeta.timestamp;
+    OUT << indent << " Version: " << dir->directoryMeta.version.first << "." << dir->directoryMeta.version.second;
     QLinkedList<QExeRsrcEntryPtr> children = dir->children();
-    OUT << indent << children.size() << " entries:";
+    OUT << indent << " " << children.size() << " entries:";
     QExeRsrcEntryPtr child;
     foreach (child, children) {
-        OUT << indent << " Type: " << child->type();
+        OUT << indent << "> Type: " << child->type();
         if (child->name.isEmpty())
-            OUT << indent << " ID: " << HEX(child->id);
+            OUT << indent << "> ID: " << HEX(child->id);
         else
-            OUT << indent << " Name: " << child->name;
+            OUT << indent << "> Name: " << child->name;
         if (child->type() == QExeRsrcEntry::Directory) {
-            rsrcPrintDirectory(indent + " ", child);
+            rsrcPrintDirectory(indent + ">", child);
             continue;
         }
-        OUT << indent << " Data size: " << HEX(child->data.size());
-        OUT << indent << " Codepage: " << HEX(child->dataMeta.codepage);
-        OUT << indent << " (reserved, must be 0): " << HEX(child->dataMeta.reserved);
+        OUT << indent << "> Data size: " << HEX(child->data.size());
+        OUT << indent << "> Codepage: " << HEX(child->dataMeta.codepage);
+        OUT << indent << "> (reserved, must be 0): " << HEX(child->dataMeta.reserved);
     }
 }
 
@@ -36,6 +36,7 @@ int main(int argc, char *argv[])
     (void)argc, (void)argv;
 
     QExe exeDat;
+    exeDat.setAutoCreateRsrcManager(false);
 
     QDir testDir("CaveStoryEN");
     testDir.makeAbsolute();
@@ -108,8 +109,19 @@ int main(int argc, char *argv[])
         OUT << " Characteristics: " << section->characteristics;
     }
     QSharedPointer<QExeRsrcManager> rsrcMgr = exeDat.rsrcManager();
-    OUT << " == Printing .rsrc section contents (root directory) == ";
-    rsrcPrintDirectory(QString(""), rsrcMgr->root());
+    if (!rsrcMgr) {
+        rsrcMgr = exeDat.createRsrcManager(&errinfo);
+        if (!rsrcMgr) {
+            OUT << "Error while reading \".rsrc\" section:";
+            OUT << "ID: " << errinfo.errorID;
+            OUT << "Details: " << errinfo.details;
+            return 1;
+        }
+    }
+    if (rsrcMgr) {
+        OUT << " == Printing .rsrc section contents (root directory) == ";
+        rsrcPrintDirectory(QString(""), rsrcMgr->root());
+    }
 
     QFile outNew(QString("%1/Doukutsu.out.exe").arg(testDir.absolutePath()));
     outNew.open(QFile::WriteOnly);
