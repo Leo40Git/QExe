@@ -56,7 +56,8 @@ public:
     Q_DECLARE_FLAGS(Characteristics, Characteristic)
     Q_FLAG(Characteristics)
     explicit QExeSection(QObject *parent = nullptr);
-    explicit QExeSection(const QLatin1String &name, quint32 size, QObject *parent = nullptr);
+    explicit QExeSection(const QLatin1String &name, QByteArray data, QExeSection::Characteristics chars, QObject *parent = nullptr);
+    explicit QExeSection(const QLatin1String &name, quint32 size, QExeSection::Characteristics chars, QObject *parent = nullptr);
     bool linearize;
     QLatin1String name() const;
     void setName(const QLatin1String &name);

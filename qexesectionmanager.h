@@ -34,7 +34,9 @@ public:
     QVector<QExeSectionPtr> removeSections(QVector<int> indexes);
     QExeSectionPtr removeSection(const QLatin1String &name);
     QVector<QExeSectionPtr> removeSections(QVector<QLatin1String> names);
-    QExeSectionPtr createSection(const QLatin1String &name, quint32 size);
+    QExeSectionPtr createSection(const QLatin1String &name, QByteArray data, QExeSection::Characteristics chars = QExeSection::ContainsInitializedData | QExeSection::IsReadable);
+    QExeSectionPtr createSection(const QLatin1String &name, quint32 size, QExeSection::Characteristics chars = QExeSection::ContainsUninitializedData | QExeSection::IsReadable | QExeSection::IsWritable);
+    int rsrcSectionIndex();
     QBuffer *setupRVAPoint(quint32 rva, QIODevice::OpenMode mode) const;
 private:
     friend class QExe;
@@ -46,7 +48,7 @@ private:
     bool write(QIODevice &dst, QDataStream &ds, QExeErrorInfo *errinfo);
     bool test(bool justOrderAndOverlap, quint32 *fileSize = nullptr, QExeErrorInfo *errinfo = nullptr);
     void positionSection(QExeSectionPtr newSec, quint32 i, quint32 sectionAlign);
-    int rsrcSectionIndex();
+    QExeSectionPtr createSectionInternal(QExeSectionPtr newSec);
 };
 
 #endif // QEXESECTIONMANAGER_H

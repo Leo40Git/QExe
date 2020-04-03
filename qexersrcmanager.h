@@ -31,9 +31,9 @@ private:
     class SectionSizes;
     SectionSizes calculateSectionSizes(QExeRsrcEntryPtr root, QStringList *allocStr = nullptr);
     class SymbolTable;
-    void writeDirectory(QBuffer &dst, QDataStream &ds, QExeRsrcEntryPtr dir, SymbolTable &refMem);
-    void writeEntries(QBuffer &dst, QDataStream &ds, QLinkedList<QExeRsrcEntryPtr> entries, QLinkedList<QExeRsrcEntryPtr> &subdirs, SymbolTable &refMem);
-    void writeSymbols(QBuffer &dst, QDataStream &ds, SectionSizes sizes, SymbolTable &refMem, quint32 offset);
+    void writeDirectory(QBuffer &dst, QDataStream &ds, QExeRsrcEntryPtr dir, SymbolTable &symTbl);
+    void writeEntries(QBuffer &dst, QDataStream &ds, QLinkedList<QExeRsrcEntryPtr> entries, QLinkedList<QExeRsrcEntryPtr> &subdirsName, QLinkedList<QExeRsrcEntryPtr> &subdirsID, SymbolTable &symTbl);
+    void writeSymbols(QBuffer &dst, QDataStream &ds, SectionSizes sizes, SymbolTable &symTbl, quint32 offset);
     QExe *exeDat;
     QExeRsrcEntryPtr m_root;
 };

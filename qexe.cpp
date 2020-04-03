@@ -289,11 +289,9 @@ bool QExe::isFillerSection(QExeSectionPtr sec)
 QExeSectionPtr QExe::createFillerSection(int num, quint32 addr, quint32 size)
 {
     QString nameSrc = QString(".flr%1").arg(QString::number(num, 16).toUpper().rightJustified(4, '0'));
-    QExeSectionPtr newSec = QExeSectionPtr(new QExeSection(QLatin1String(nameSrc.toLatin1()), 0));
+    QExeSectionPtr newSec = QExeSectionPtr(new QExeSection(QLatin1String(nameSrc.toLatin1()), 0, fillerChrs));
     newSec->virtualAddr = addr;
     newSec->virtualSize = size;
-    newSec->characteristics = fillerChrs;
-    
     return newSec;
 }
 

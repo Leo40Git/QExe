@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 
     QDir testDir("CaveStoryEN");
     testDir.makeAbsolute();
-    QFile exeFile(QString("%1/Doukutsu.exe").arg(testDir.absolutePath()));
+    QFile exeFile(QStringLiteral("%1/Doukutsu.exe").arg(testDir.absolutePath()));
     if (!exeFile.exists()) {
         OUT << "Could not find EXE file \"" << exeFile.fileName() << "\":";
         return 1;
@@ -108,6 +108,18 @@ int main(int argc, char *argv[])
         OUT << " Line-numbers count: " << HEX(section->linenumsCount);
         OUT << " Characteristics: " << section->characteristics;
     }
+
+    // dump pure .rsrc section
+    QFile rsrcSecFile(QStringLiteral("%1/rsrc.sec").arg(testDir.absolutePath()));
+    {
+        QExeSectionPtr rsrcSec = secMgr->sectionAt(secMgr->rsrcSectionIndex());
+        rsrcSecFile.open(QFile::WriteOnly);
+        rsrcSecFile.write(rsrcSec->rawData);
+        rsrcSecFile.close();
+        rsrcSec = nullptr;
+        OUT << "Dumped original .rsrc section to \"" << rsrcSecFile.fileName() << "\"";
+    }
+
     QSharedPointer<QExeRsrcManager> rsrcMgr = exeDat.rsrcManager();
     if (!rsrcMgr) {
         rsrcMgr = exeDat.createRsrcManager(&errinfo);
@@ -122,7 +134,7 @@ int main(int argc, char *argv[])
     /*
     if (rsrcMgr) {
         OUT << " == Printing .rsrc section contents (root directory) == ";
-        rsrcPrintDirectory(QString(""), rsrcMgr->root());
+        rsrcPrintDirectory(QStringLiteral(""), rsrcMgr->root());
     }
     */
 
@@ -140,7 +152,7 @@ int main(int argc, char *argv[])
             OUT << "DLG_ABOUT don't have only 1 child, the git";
         else {
             QExeRsrcEntryPtr dlgAboutData = dlgAboutC.first();
-            QFile outAboutData(QString("%1/DLG_ABOUT.bin").arg(testDir.absolutePath()));
+            QFile outAboutData(QStringLiteral("%1/DLG_ABOUT.bin").arg(testDir.absolutePath()));
             outAboutData.open(QFile::WriteOnly);
             outAboutData.write(dlgAboutData->data);
             outAboutData.close();
@@ -149,7 +161,7 @@ int main(int argc, char *argv[])
     }
     */
 
-    QFile outNew(QString("%1/Doukutsu.out.exe").arg(testDir.absolutePath()));
+    QFile outNew(QStringLiteral("%1/Doukutsu.out.exe").arg(testDir.absolutePath()));
     outNew.open(QFile::WriteOnly);
     if (!exeDat.write(outNew, &errinfo)) {
         OUT << "Error while writing EXE file \"" << outNew.fileName() << "\":";
@@ -159,6 +171,38 @@ int main(int argc, char *argv[])
     }
     outNew.close();
     OUT << "Wrote new EXE to \"" << outNew.fileName() << "\"";
+
+    exeDat.removeRsrcManager(true);
+
+    // dump modified .rsrc section
+    QFile rsrcSecOutFile(QStringLiteral("%1/rsrc.out.sec").arg(testDir.absolutePath()));
+    {
+        QExeSectionPtr rsrcSec = secMgr->sectionAt(secMgr->rsrcSectionIndex());
+        rsrcSecOutFile.open(QFile::WriteOnly);
+        rsrcSecOutFile.write(rsrcSec->rawData);
+        rsrcSecOutFile.close();
+        rsrcSec = nullptr;
+        OUT << "Dumped rebuilt .rsrc section to \"" << rsrcSecOutFile.fileName() << "\"";
+    }
+
+    // remove modified .rsrc section and replace with original
+    secMgr->removeSection(secMgr->rsrcSectionIndex());
+    rsrcSecFile.open(QFile::ReadOnly);
+    QByteArray data = rsrcSecFile.readAll();
+    rsrcSecFile.close();
+    secMgr->createSection(QLatin1String(".rsrc"), data);
+
+    // create rebuilt EXE with original .rsrc section
+    QFile outNew2(QStringLiteral("%1/Doukutsu.out2.exe").arg(testDir.absolutePath()));
+    outNew2.open(QFile::WriteOnly);
+    if (!exeDat.write(outNew2, &errinfo)) {
+        OUT << "Error while writing EXE file \"" << outNew.fileName() << "\":";
+        OUT << "ID: " << errinfo.errorID;
+        OUT << "Details: " << errinfo.details;
+        return 1;
+    }
+    outNew2.close();
+    OUT << "Wrote new EXE with original .rsrc section to \"" << outNew2.fileName() << "\"";
 
     return 0;
 }

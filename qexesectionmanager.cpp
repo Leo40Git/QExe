@@ -139,10 +139,18 @@ QVector<QExeSectionPtr> QExeSectionManager::removeSections(QVector<QLatin1String
     return ret;
 }
 
-QExeSectionPtr QExeSectionManager::createSection(const QLatin1String &name, quint32 size)
+QExeSectionPtr QExeSectionManager::createSection(const QLatin1String &name, QByteArray data, QExeSection::Characteristics chars)
 {
-    QExeSectionPtr newSec = QExeSectionPtr(new QExeSection(name, size));
-    newSec->linearize = false;
+    return createSectionInternal(QExeSectionPtr(new QExeSection(name, data, chars)));
+}
+
+QExeSectionPtr QExeSectionManager::createSection(const QLatin1String &name, quint32 size, QExeSection::Characteristics chars)
+{
+    return createSectionInternal(QExeSectionPtr(new QExeSection(name, size, chars)));
+}
+
+QExeSectionPtr QExeSectionManager::createSectionInternal(QExeSectionPtr newSec)
+{
     int secs;
     if ((secs = sectionCount()) > 0) {
         QExeSectionPtr lastSec = sections[secs - 1];
