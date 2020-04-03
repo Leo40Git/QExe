@@ -56,6 +56,8 @@ public:
         quint32 timestamp;
         Version16 version;
     } directoryMeta;
+
+    uint depth();
     QLinkedList<QExeRsrcEntryPtr> children() const;
     bool addChild(QExeRsrcEntryPtr child);
     QExeRsrcEntryPtr createChild(Type type, const QString &name);
@@ -70,6 +72,7 @@ private:
     friend class QExeRsrcManager;
 
     explicit QExeRsrcEntry(Type type, QObject *parent = nullptr);
+    QExeRsrcEntryPtr m_parent;
     Type m_type;
     QLinkedList<QExeRsrcEntryPtr> m_children;
 };

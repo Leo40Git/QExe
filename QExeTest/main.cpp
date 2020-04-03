@@ -109,6 +109,9 @@ int main(int argc, char *argv[])
         OUT << " Characteristics: " << section->characteristics;
     }
 
+    OUT << "Press <RETURN> to continue.";
+    getchar();
+
     // dump pure .rsrc section
     QFile rsrcSecFile(QStringLiteral("%1/rsrc.sec").arg(testDir.absolutePath()));
     {
@@ -171,6 +174,9 @@ int main(int argc, char *argv[])
     }
     outNew.close();
     OUT << "Wrote new EXE to \"" << outNew.fileName() << "\"";
+
+    OUT << "Press <RETURN> to continue.";
+    getchar();
 
     exeDat.removeRsrcManager(true);
 

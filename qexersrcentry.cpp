@@ -5,6 +5,17 @@ QExeRsrcEntry::Type QExeRsrcEntry::type() const
     return m_type;
 }
 
+uint QExeRsrcEntry::depth()
+{
+    uint ret = 0;
+    QExeRsrcEntryPtr cur = m_parent;
+    while (cur) {
+        ret++;
+        cur = cur->m_parent;
+    }
+    return ret;
+}
+
 QLinkedList<QExeRsrcEntryPtr> QExeRsrcEntry::children() const
 {
     return m_children;
@@ -13,6 +24,9 @@ QLinkedList<QExeRsrcEntryPtr> QExeRsrcEntry::children() const
 bool QExeRsrcEntry::addChild(QExeRsrcEntryPtr child)
 {
     if (m_type != Directory || child.isNull())
+        return false;
+    if (child->type() == Directory && depth() == 2)
+        // max depth is 2
         return false;
     QExeRsrcEntryPtr entry;
     QString childName = child->name;
@@ -30,12 +44,16 @@ bool QExeRsrcEntry::addChild(QExeRsrcEntryPtr child)
         }
     }
     m_children += child;
+    child->m_parent = QExeRsrcEntryPtr(this);
     return true;
 }
 
 QExeRsrcEntryPtr QExeRsrcEntry::createChild(QExeRsrcEntry::Type type, const QString &name)
 {
     if (m_type != Directory)
+        return nullptr;
+    if (type == Directory && depth() == 2)
+        // max depth is 2
         return nullptr;
     QExeRsrcEntryPtr child = QExeRsrcEntryPtr(new QExeRsrcEntry(type));
     child->name = name;
@@ -48,6 +66,9 @@ QExeRsrcEntryPtr QExeRsrcEntry::createChild(QExeRsrcEntry::Type type, const QStr
 QExeRsrcEntryPtr QExeRsrcEntry::createChild(QExeRsrcEntry::Type type, quint32 id)
 {
     if (m_type != Directory)
+        return nullptr;
+    if (type == Directory && depth() == 2)
+        // max depth is 2
         return nullptr;
     QExeRsrcEntryPtr child = QExeRsrcEntryPtr(new QExeRsrcEntry(type));
     child->id = id;
