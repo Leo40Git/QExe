@@ -102,7 +102,8 @@ void QExeRsrcManager::toSection()
     OUT << "Data entry size: " << HEX(sizes.dataDescSize);
     OUT << "String table size: " << HEX(sizes.stringSize);
     OUT << "Data size: " << HEX(sizes.dataSize);
-    QExeSectionPtr sec = exeDat->sectionManager()->createSection(QLatin1String(".rsrc"), sizes.totalSize());
+    quint32 size = QExe::alignForward(sizes.totalSize(), exeDat->optionalHeader()->sectionAlign);
+    QExeSectionPtr sec = exeDat->sectionManager()->createSection(QLatin1String(".rsrc"), size);
     sec->characteristics = QExeSection::ContainsInitializedData | QExeSection::IsReadable;
     QBuffer buf(&sec->rawData);
     buf.open(QBuffer::WriteOnly);
@@ -270,7 +271,7 @@ void QExeRsrcManager::writeEntries(QBuffer &dst, QDataStream &ds, QLinkedList<QE
         } else {
             symTbl.strings += entry->name;
             symTbl.stringRefs[entry->name] += dst.pos();
-            ds << ~hiMask;
+            ds << hiMask;
         }
         if (entry->type() == QExeRsrcEntry::Data) {
             symTbl.dataDescs += entry;
@@ -282,7 +283,7 @@ void QExeRsrcManager::writeEntries(QBuffer &dst, QDataStream &ds, QLinkedList<QE
                 subdirsID += entry;
             else
                 subdirsName += entry;
-            ds << ~hiMask;
+            ds << hiMask;
         }
     }
 }
