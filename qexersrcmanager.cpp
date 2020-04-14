@@ -201,6 +201,8 @@ bool QExeRsrcManager::readEntry(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr 
     return dir->addChild(child);
 }
 
+const quint32 rsrcDataAlign = 4; // .rsrc data is aligned to DWORD boundary
+
 QExeRsrcManager::SectionSizes QExeRsrcManager::calculateSectionSizes(QExeRsrcEntryPtr root, QStringList *allocStr)
 {
     if (allocStr == nullptr)
@@ -219,7 +221,7 @@ QExeRsrcManager::SectionSizes QExeRsrcManager::calculateSectionSizes(QExeRsrcEnt
         }
         if (entry->type() == QExeRsrcEntry::Data) {
             sz.dataDescSize += 0x10;
-            sz.dataSize += static_cast<quint32>(entry->data.size());
+            sz.dataSize += QExe::alignForward(static_cast<quint32>(entry->data.size()), rsrcDataAlign);
         } else {
             SectionSizes other = calculateSectionSizes(entry, allocStr);
             sz += other;
@@ -314,6 +316,7 @@ void QExeRsrcManager::writeSymbols(QBuffer &dst, QDataStream &ds, QExeRsrcManage
         OUT << "Writing data for entry " << entryID(dataDesc) << " (" << dataDesc.data() << ")";
         dataPtrs[dataDesc] = static_cast<quint32>(dst.pos()) + offset;
         dst.write(dataDesc->data);
+        dst.seek(QExe::alignForward(static_cast<quint32>(dst.pos()), rsrcDataAlign));
     }
     // write data descriptions and their references
     OUT << " --- Data descriptions --- ";
