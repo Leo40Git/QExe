@@ -33,7 +33,7 @@ public:
         EFIBootDriver = 11,
         EFIRuntimeDriver = 12,
         EFIROM = 13,
-        XBOX = 14,
+        Xbox = 14,
         WinBootApp = 16
     };
     Q_ENUM(Subsystem)
@@ -48,7 +48,7 @@ public:
         ForceCodeIntegrity = 0x0080, // Code Integrity checks are enforced.
         NXCompatible = 0x0100, // Image is NX compatible.
         NoIsolation = 0x0200, // Isolation aware, but do not isolate the image.
-        NOSEHandling = 0x0400, // Does not use structured exception (SE) handling. No SE handler may be called in this image.
+        NoSEHandling = 0x0400, // Does not use structured exception (SE) handling. No SE handler may be called in this image.
         NoBinding = 0x0800, // Do not bind the image.
         RunInAppContainer = 0x1000, // Image must execute in an AppContainer.
         IsWDMDriver = 0x2000, // A WDM driver.
