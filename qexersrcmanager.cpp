@@ -6,10 +6,6 @@
 
 #include "qexe.h"
 
-#include <QDebug>
-#define OUT qInfo().noquote().nospace()
-#define HEX(n) "0x" << QString::number(n, 16).toUpper()
-
 #define SET_ERROR_INFO(errName) \
     if (errinfo != nullptr) { \
         errinfo->errorID = QExeErrorInfo::errName; \
@@ -96,12 +92,7 @@ inline QString entryID(QExeRsrcEntryPtr e) {
 void QExeRsrcManager::toSection()
 {
     SymbolTable symTbl;
-    OUT << "ROMP 0: Calculating section sizes";
     SectionSizes sizes = calculateSectionSizes(m_root);
-    OUT << "Directory size: " << HEX(sizes.directorySize);
-    OUT << "Data entry size: " << HEX(sizes.dataDescSize);
-    OUT << "String table size: " << HEX(sizes.stringSize);
-    OUT << "Data size: " << HEX(sizes.dataSize);
     quint32 size = QExe::alignForward(sizes.totalSize(), exeDat->optionalHeader()->sectionAlign);
     QExeSectionPtr sec = exeDat->sectionManager()->createSection(QLatin1String(".rsrc"), size);
     sec->characteristics = QExeSection::ContainsInitializedData | QExeSection::IsReadable;
@@ -109,7 +100,6 @@ void QExeRsrcManager::toSection()
     buf.open(QBuffer::WriteOnly);
     QDataStream ds(&buf);
     ds.setByteOrder(QDataStream::LittleEndian);
-    OUT << "ROMP 1: Writing directories";
     // write root directory
     QLinkedList<QExeRsrcEntryPtr> rootDirsName, rootDirsID;
     writeDirectory(buf, ds, m_root, rootDirsName, rootDirsID, symTbl);
@@ -126,7 +116,6 @@ void QExeRsrcManager::toSection()
         writeDirectory(buf, ds, entry, ignored, ignored, symTbl);
     foreach (entry, subdirsID)
         writeDirectory(buf, ds, entry, ignored, ignored, symTbl);
-    OUT << "ROMP 2: Writing symbols";
     writeSymbols(buf, ds, sizes, symTbl, sec->virtualAddr);
     buf.close();
 }
@@ -164,7 +153,6 @@ bool QExeRsrcManager::readEntry(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr 
     else {
         // name
         nameOff &= ~hiMask;
-        OUT << "nameOff is " << HEX(nameOff);
         src.seek(nameOff);
         quint16 nameLen;
         ds >> nameLen;
@@ -176,7 +164,6 @@ bool QExeRsrcManager::readEntry(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr 
     prevPos = src.pos();
     if ((dataOff & hiMask) == 0) {
         // data
-        OUT << "dataOff is " << HEX(dataOff);
         src.seek(dataOff);
         quint32 dataPtr;
         ds >> dataPtr;
@@ -232,7 +219,6 @@ QExeRsrcManager::SectionSizes QExeRsrcManager::calculateSectionSizes(QExeRsrcEnt
 
 void QExeRsrcManager::writeDirectory(QBuffer &dst, QDataStream &ds, QExeRsrcEntryPtr dir, QLinkedList<QExeRsrcEntryPtr> &subdirsName, QLinkedList<QExeRsrcEntryPtr> &subdirsID, QExeRsrcManager::SymbolTable &symTbl)
 {
-    OUT << " === Writing directory " << entryID(dir) << " (" << dir.data() << ") === ";
     symTbl.directories += dir;
     symTbl.directoryOffs[dir] = static_cast<quint32>(dst.pos());
     // write unimportant fields
@@ -253,12 +239,10 @@ void QExeRsrcManager::writeDirectory(QBuffer &dst, QDataStream &ds, QExeRsrcEntr
         }
     }
     // write em out
-    OUT << "Entries: " << HEX(entryCountName) << " named, " << HEX(entryCountID) << " ID'd";
     ds << entryCountName;
     ds << entryCountID;
     // second romp to actually write entries
     // make a subdir list to write *after* writing directory
-    OUT << " --- Writing entries --- ";
     writeEntries(dst, ds, entriesName, subdirsName, subdirsID, symTbl);
     writeEntries(dst, ds, entriesID, subdirsName, subdirsID, symTbl);
 }
@@ -267,7 +251,6 @@ void QExeRsrcManager::writeEntries(QBuffer &dst, QDataStream &ds, QLinkedList<QE
 {
     QExeRsrcEntryPtr entry;
     foreach (entry, entries) {
-        OUT << "Writing entry " << entryID(entry) << " (" << entry.data() << ")";
         if (entry->name.isEmpty()) {
             ds << entry->id;
         } else {
@@ -292,13 +275,10 @@ void QExeRsrcManager::writeEntries(QBuffer &dst, QDataStream &ds, QLinkedList<QE
 
 void QExeRsrcManager::writeSymbols(QBuffer &dst, QDataStream &ds, QExeRsrcManager::SectionSizes sizes, QExeRsrcManager::SymbolTable &symTbl, quint32 offset)
 {
-    OUT << " === Writing symbols === ";
     QLinkedListIterator<QExeRsrcEntryPtr> dirsI(symTbl.directories);
     // write directroy references
-    OUT << " --- Directory references --- ";
     while (dirsI.hasNext()) {
         QExeRsrcEntryPtr entry = dirsI.next();
-        OUT << "Writing references to directory " << entryID(entry) << " (" << entry.data() << ")";
         quint32 v = symTbl.directoryOffs[entry] | hiMask;
         qint64 pos;
         foreach (pos, symTbl.directoryRefs[entry]) {
@@ -307,24 +287,20 @@ void QExeRsrcManager::writeSymbols(QBuffer &dst, QDataStream &ds, QExeRsrcManage
         }
     }
     // write actual data, remember offsets
-    OUT << " --- Data --- ";
     QMap<QExeRsrcEntryPtr, quint32> dataPtrs;
     dst.seek(sizes.directorySize + sizes.dataDescSize + sizes.stringSize);
     QLinkedListIterator<QExeRsrcEntryPtr> dataDescsI(symTbl.dataDescs);
     while (dataDescsI.hasNext()) {
         QExeRsrcEntryPtr dataDesc = dataDescsI.next();
-        OUT << "Writing data for entry " << entryID(dataDesc) << " (" << dataDesc.data() << ")";
         dataPtrs[dataDesc] = static_cast<quint32>(dst.pos()) + offset;
         dst.write(dataDesc->data);
         dst.seek(QExe::alignForward(static_cast<quint32>(dst.pos()), rsrcDataAlign));
     }
     // write data descriptions and their references
-    OUT << " --- Data descriptions --- ";
     dst.seek(sizes.directorySize);
     dataDescsI.toFront();
     while (dataDescsI.hasNext()) {
         QExeRsrcEntryPtr dataDesc = dataDescsI.next();
-        OUT << "Writing data description for entry " << entryID(dataDesc) << " (" << dataDesc.data() << ")";
         quint32 prevPos = static_cast<quint32>(dst.pos());
         qint64 pos;
         foreach (pos, symTbl.dataDescRefs[dataDesc]) {
@@ -339,13 +315,11 @@ void QExeRsrcManager::writeSymbols(QBuffer &dst, QDataStream &ds, QExeRsrcManage
         ds << dataDesc->dataMeta.reserved;
     }
     // write strings and their references
-    OUT << " --- String table --- ";
     QTextEncoder *encoder = QTextCodec::codecForName("UTF-16LE")->makeEncoder(QTextCodec::IgnoreHeader);
     dst.seek(sizes.directorySize + sizes.dataDescSize);
     QLinkedListIterator<QString> stringsI = QLinkedListIterator<QString>(symTbl.strings);
     while (stringsI.hasNext()) {
         QString str = stringsI.next();
-        OUT << "Writing string " << str;
         quint32 prevPos = static_cast<quint32>(dst.pos());
         quint32 v = prevPos | hiMask;
         qint64 pos;

@@ -5,6 +5,8 @@
 
 #include "qexe.h"
 
+#include <iostream>
+
 #define OUT qInfo().noquote().nospace()
 #define HEX(n) "0x" << QString::number(n, 16).toUpper()
 
@@ -29,6 +31,11 @@ void rsrcPrintDirectory(const QString &indent, QExeRsrcEntryPtr dir) {
         OUT << indent << "> Codepage: " << HEX(child->dataMeta.codepage);
         OUT << indent << "> (reserved, must be 0): " << HEX(child->dataMeta.reserved);
     }
+}
+
+void waitForEnter() {
+    static std::string line;
+    std::getline(std::cin, line);
 }
 
 int main(int argc, char *argv[])
@@ -110,7 +117,7 @@ int main(int argc, char *argv[])
     }
 
     OUT << "Press <RETURN> to continue.";
-    getchar();
+    waitForEnter();
 
     // dump pure .rsrc section
     QFile rsrcSecFile(QStringLiteral("%1/rsrc.sec").arg(testDir.absolutePath()));
@@ -176,8 +183,9 @@ int main(int argc, char *argv[])
     OUT << "Wrote new EXE to \"" << outNew.fileName() << "\"";
 
     OUT << "Press <RETURN> to continue.";
-    getchar();
+    waitForEnter();
 
+    /*
     exeDat.removeRsrcManager(true);
 
     // dump modified .rsrc section
@@ -209,6 +217,10 @@ int main(int argc, char *argv[])
     }
     outNew2.close();
     OUT << "Wrote new EXE with original .rsrc section to \"" << outNew2.fileName() << "\"";
+
+    OUT << "Press <RETURN> to continue.";
+    waitForEnter();
+    */
 
     return 0;
 }
