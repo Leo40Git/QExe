@@ -55,7 +55,7 @@ public:
         LargeAddressAware = 0x0020, // Application can handle > 2-GB addresses.
         Reserved_0040 = 0x0040, // This flag is reserved for future use.
         IsLittleEndian = 0x0080, // Little endian: the least significant bit (LSB) precedes the most significant bit (MSB) in memory. This flag is deprecated and should be zero.
-        ArchX86 = 0x0100, // Machine is based on a 32-bit-word architecture.
+        x32Arch = 0x0100, // Machine is based on a 32-bit-word architecture.
         DebugInfoStripped = 0x0200, // Debugging information is removed from the image file.
         RemovableRunFromSwap = 0x0400, // If the image is on removable media, fully load it and copy it to the swap file.
         NetRunFromSwap = 0x0800, // If the image is on network media, fully load it and copy it to the swap file.
