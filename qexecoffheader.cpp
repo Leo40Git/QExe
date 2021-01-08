@@ -17,7 +17,7 @@ QExeCOFFHeader::QExeCOFFHeader(QExe *exeDat, QObject *parent) : QObject(parent)
 bool QExeCOFFHeader::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *errinfo)
 {
     (void)src;
-    ds >> machineType;
+    ds >> (quint16 &) machineType;
     ds >> sectionCount;
     // "Note that the Windows loader limits the number of sections to 96." (https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#coff-file-header-object-and-image)
     if (sectionCount > 96) {
@@ -31,21 +31,19 @@ bool QExeCOFFHeader::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *errinf
     ds >> symTblPtr;
     ds >> symTblCount;
     ds >> optHeadSize;
-    quint16 charsRaw;
-    ds >> charsRaw;
-    characteristics = static_cast<Characteristics>(charsRaw);
+    ds >> (quint16 &) characteristics;
     return true;
 }
 
 bool QExeCOFFHeader::write(QIODevice &dst, QDataStream &ds, QExeErrorInfo *errinfo)
 {
     (void)dst, (void)errinfo;
-    ds << machineType;
+    ds << (quint16 &) machineType;
     ds << sectionCount;
     ds << timestamp;
     ds << symTblPtr;
     ds << symTblCount;
     ds << optHeadSize;
-    ds << static_cast<quint16>(characteristics);
+    ds << (quint16 &) characteristics;
     return true;
 }

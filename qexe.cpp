@@ -2,6 +2,7 @@
 
 #include <QtEndian>
 #include <QBuffer>
+#include <QDataStream>
 
 static QMap<QLatin1String, QExeOptionalHeader::DataDirectories> secName2DataDir {
     { QLatin1String(".edata"), QExeOptionalHeader::ExportTable },
