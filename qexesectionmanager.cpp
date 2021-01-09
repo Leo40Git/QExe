@@ -197,6 +197,10 @@ QExeSectionManager::QExeSectionManager(QExe *exeDat, QObject *parent) : QObject(
     this->exeDat = exeDat;
 }
 
+bool sectionVALessThan(const QSharedPointer<QExeSection> &s1, const QSharedPointer<QExeSection> &s2) {
+    return s1->virtualAddr < s2->virtualAddr;
+}
+
 bool QExeSectionManager::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *errinfo)
 {
     (void)errinfo;
@@ -226,6 +230,8 @@ bool QExeSectionManager::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *er
         newSec->characteristics = static_cast<QExeSection::Characteristics>(charsRaw);
         sections += newSec;
     }
+    // sort sections by RVA
+    std::sort(sections.begin(), sections.end(), sectionVALessThan);
     return true;
 }
 
@@ -257,10 +263,6 @@ bool QExeSectionManager::write(QIODevice &dst, QDataStream &ds, QExeErrorInfo *e
     return true;
 }
 
-bool sectionVALessThan(const QSharedPointer<QExeSection> &s1, const QSharedPointer<QExeSection> &s2) {
-    return s1->virtualAddr < s2->virtualAddr;
-}
-
 class AllocSpan {
 public:
     quint32 start;
@@ -277,17 +279,16 @@ public:
     }
 };
 
-typedef QLinkedList<AllocSpan> AllocMap;
+typedef std::list<AllocSpan> AllocMap;
 
 bool checkAlloc(AllocMap &map, AllocSpan span, bool add = true) {
-    QLinkedListIterator<AllocSpan> mapI(map);
-    while (mapI.hasNext()) {
-        const AllocSpan &chk = mapI.next();
-        if (chk.collides(span))
-            return false;
-    }
+    auto result = std::find_if(map.begin(), map.end(), [&span](const AllocSpan &chk) {
+        return chk.collides(span);
+    });
+    if (result != map.end())
+        return false;
     if (add)
-        map += span;
+        map.push_front(span);
     return true;
 }
 
@@ -314,7 +315,7 @@ bool QExeSectionManager::test(bool justOrderAndOverlap, quint32 *fileSize, QExeE
     quint32 fileAlign = exeDat->optionalHeader()->fileAlign;
     AllocMap map;
     // disallow collision with primary header
-    map += AllocSpan(0, exeDat->optionalHeader()->headerSize);
+    map.push_front(AllocSpan(0, exeDat->optionalHeader()->headerSize));
     for (int i = 0; i < 2; i++) {
         foreach (section, sections) {
             if (section->linearize != (i == 0))
@@ -349,13 +350,11 @@ bool QExeSectionManager::test(bool justOrderAndOverlap, quint32 *fileSize, QExeE
         return true;
     // -- Calculate file size
     *fileSize = 0;
-    QLinkedListIterator<AllocSpan> mapI(map);
-    while (mapI.hasNext()) {
-        const AllocSpan &span = mapI.next();
+    std::for_each(map.begin(), map.end(), [fileSize](const AllocSpan &span) {
         quint32 v = span.start + span.length;
         if (v > *fileSize)
             *fileSize = v;
-    }
+    });
     QExe::alignForward(*fileSize, fileAlign);
     return true;
 }
@@ -364,11 +363,11 @@ void QExeSectionManager::positionSection(QExeSectionPtr newSec, quint32 i, quint
 {
     AllocMap map;
     // disallow collision with primary header
-    map += AllocSpan(0, exeDat->optionalHeader()->headerSize);
+    map.push_front(AllocSpan(0, exeDat->optionalHeader()->headerSize));
     // add other sections
     QExeSectionPtr section;
     foreach (section, sections) {
-        map += AllocSpan(section->virtualAddr, QExe::alignForward(section->virtualSize, sectionAlign));
+        map.push_front(AllocSpan(section->virtualAddr, QExe::alignForward(section->virtualSize, sectionAlign)));
     }
     AllocSpan as(0, QExe::alignForward(newSec->virtualSize, sectionAlign));
     while (true) {
