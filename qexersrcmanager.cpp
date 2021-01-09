@@ -83,8 +83,11 @@ bool QExeRsrcManager::addBeforeRsrcSection(QSharedPointer<QExeSectionManager> se
         return false;
     }
     if (!rsrcSec.isNull()) {
-        secMgr->addSection(rsrcSec);
-        shiftOffsets(rsrcSec, rsrcSec->virtualAddr - oldRVA);
+        if (secMgr->addSection(rsrcSec))
+            // this can only fail if .rsrc already exists
+            // since we removed it earlier, assume the user just added their own .rsrc section
+            // and don't bother correcting the "old" one
+            shiftOffsets(rsrcSec, rsrcSec->virtualAddr - oldRVA);
     }
     return true;
 }
