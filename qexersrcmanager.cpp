@@ -38,6 +38,40 @@ QList<QExeRsrcEntryPtr> QExeRsrcManager::entriesFromPath(const QString &path) co
     return m_root->fromPath(p);
 }
 
+void QExeRsrcManager::shiftOffsets(QExeSectionPtr rsrcSec, const qint64 shift)
+{
+    QBuffer buf(rsrcSec.data());
+    buf.open(QBuffer::ReadWrite);
+    QDataStream ds(&buf);
+    shiftOffsets0(buf, ds, shift);
+    buf.close();
+}
+
+void QExeRsrcManager::shiftOffsets0(QBuffer &buf, QDataStream &ds, const qint64 shift)
+{
+    quint16 entriesID, entriesName;
+    buf.seek(buf.pos() + 12);
+    ds >> entriesName;
+    ds >> entriesID;
+    quint16 entries = entriesID + entriesName;
+    for (quint16 i = 0; i < entries; i++) {
+        quint32 rva;
+        ds >> rva;
+        qint64 pos = buf.pos();
+        if ((rva & hiMask) != 0) {
+            buf.seek(rva & ~hiMask);
+            shiftOffsets0(buf, ds, shift);
+        } else {
+            buf.seek(rva);
+            quint32 val;
+            ds >> val;
+            buf.seek(rva);
+            ds << val + shift;
+        }
+        buf.seek(pos);
+    }
+}
+
 bool QExeRsrcManager::read(QExeSectionPtr sec, QExeErrorInfo *errinfo)
 {
     QBuffer buf(&sec->rawData);

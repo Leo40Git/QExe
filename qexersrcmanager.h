@@ -22,6 +22,8 @@ public:
 
     QExeRsrcEntryPtr root() const;
     QList<QExeRsrcEntryPtr> entriesFromPath(const QString &path) const;
+
+    static void shiftOffsets(QExeSectionPtr rsrcSec, const qint64 shift);
 private:
     bool readDirectory(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr dir, quint32 offset);
     bool readEntry(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr dir, quint32 offset);
@@ -32,6 +34,8 @@ private:
     void writeEntries(QBuffer &dst, QDataStream &ds, std::list<QExeRsrcEntryPtr> entries, std::list<QExeRsrcEntryPtr> &subdirsName, std::list<QExeRsrcEntryPtr> &subdirsID, SymbolTable &symTbl);
     void writeSymbols(QBuffer &dst, QDataStream &ds, SectionSizes sizes, SymbolTable &symTbl, quint32 offset);
     QExeRsrcEntryPtr m_root;
+
+    static void shiftOffsets0(QBuffer &buf, QDataStream &ds, const qint64 shift);
 };
 
 #endif // QEXERSRCMANAGER_H
