@@ -3,6 +3,7 @@
 #include <QBuffer>
 #include <QtEndian>
 #include <QTextCodec>
+#include <QDataStream>
 
 #include "qexe.h"
 

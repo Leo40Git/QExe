@@ -60,7 +60,7 @@ bool QExeOptionalHeader::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *er
     ds >> imageSize;
     ds >> headerSize;
     ds >> checksum;
-    ds >> subsystem;
+    ds >> (quint16 &) subsystem;
     quint16 dllCharsRaw;
     ds >> dllCharsRaw;
     dllCharacteristics = static_cast<DLLCharacteristics>(dllCharsRaw);
@@ -104,7 +104,7 @@ bool QExeOptionalHeader::write(QIODevice &dst, QDataStream &ds, QExeErrorInfo *e
     ds << imageSize;
     ds << headerSize;
     ds << checksum;
-    ds << subsystem;
+    ds << (quint16 &) subsystem;
     ds << static_cast<quint16>(dllCharacteristics);
     ds << stackReserveSize;
     ds << stackCommitSize;

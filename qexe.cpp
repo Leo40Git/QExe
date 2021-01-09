@@ -2,6 +2,7 @@
 
 #include <QtEndian>
 #include <QBuffer>
+#include <QDataStream>
 
 static QMap<QLatin1String, QExeOptionalHeader::DataDirectories> secName2DataDir {
     { QLatin1String(".edata"), QExeOptionalHeader::ExportTable },
@@ -156,7 +157,7 @@ bool QExe::write(QIODevice &dst, QExeErrorInfo *errinfo)
     // remove generated .rsrc section
     if (!m_rsrcMgr.isNull()) {
         int rsI = m_secMgr->rsrcSectionIndex();
-        if (rsI > 0)
+        if (rsI >= 0)
             m_secMgr->removeSection(rsI);
     }
     // ...and filler sections
@@ -197,7 +198,7 @@ QSharedPointer<QExeRsrcManager> QExe::createRsrcManager(QExeErrorInfo *errinfo)
     m_rsrcMgr = QSharedPointer<QExeRsrcManager>(new QExeRsrcManager(this));
     // if we have a .rsrc section, read from it
     int rsI = m_secMgr->rsrcSectionIndex();
-    if (rsI > 0) {
+    if (rsI >= 0) {
         if (!m_rsrcMgr->read(m_secMgr->sectionAt(rsI), errinfo)) {
             m_rsrcMgr = nullptr;
             return nullptr;
@@ -237,6 +238,7 @@ bool QExe::updateComponents(quint32 *fileSize, QExeErrorInfo *errinfo)
     }
     if (!m_secMgr->test(false, fileSize, errinfo))
         return false;
+    m_coffHead->sectionCount = m_secMgr->sectionCount();
     m_optHead->codeSize = 0;
     m_optHead->initializedDataSize = 0;
     m_optHead->uninitializedDataSize = 0;
