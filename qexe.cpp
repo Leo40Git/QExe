@@ -30,7 +30,6 @@ bool QExe::dataDirSectionName(QExeOptionalHeader::DataDirectories dataDir, QLati
 
 QExe::QExe(QObject *parent) : QObject(parent)
 {
-    m_autoCreateRsrcManager = true;
     m_autoAddFillerSections = true;
     reset();
 }
@@ -41,7 +40,6 @@ void QExe::reset()
     m_coffHead = QSharedPointer<QExeCOFFHeader>(new QExeCOFFHeader(this));
     m_optHead = QSharedPointer<QExeOptionalHeader>(new QExeOptionalHeader(this));
     m_secMgr = QSharedPointer<QExeSectionManager>(new QExeSectionManager(this));
-    m_rsrcMgr = nullptr;
 }
 
 #define SET_ERROR_INFO(errName) \
@@ -105,10 +103,6 @@ bool QExe::read(QIODevice &src, QExeErrorInfo *errinfo)
     if (!m_secMgr->read(src, ds, errinfo))
         return false;
 
-    if (m_autoCreateRsrcManager)
-        if (createRsrcManager(errinfo) == nullptr)
-            return false;
-
     return true;
 }
 
@@ -154,14 +148,9 @@ bool QExe::write(QIODevice &dst, QExeErrorInfo *errinfo)
         dst.write(pad);
     }
 
-    // remove generated .rsrc section
-    if (!m_rsrcMgr.isNull()) {
-        int rsI = m_secMgr->rsrcSectionIndex();
-        if (rsI >= 0)
-            m_secMgr->removeSection(rsI);
-    }
-    // ...and filler sections
-    removeFillerSections();
+    // remove filler sections
+    if (m_autoAddFillerSections)
+        removeFillerSections();
 
     return true;
 }
@@ -186,51 +175,15 @@ QSharedPointer<QExeSectionManager> QExe::sectionManager() const
     return m_secMgr;
 }
 
-QSharedPointer<QExeRsrcManager> QExe::rsrcManager() const
-{
-    return m_rsrcMgr;
-}
-
-QSharedPointer<QExeRsrcManager> QExe::createRsrcManager(QExeErrorInfo *errinfo)
-{
-    if (!m_rsrcMgr.isNull())
-        return m_rsrcMgr;
-    m_rsrcMgr = QSharedPointer<QExeRsrcManager>(new QExeRsrcManager(this));
-    // if we have a .rsrc section, read from it
-    int rsI = m_secMgr->rsrcSectionIndex();
-    if (rsI >= 0) {
-        if (!m_rsrcMgr->read(m_secMgr->sectionAt(rsI), errinfo)) {
-            m_rsrcMgr = nullptr;
-            return nullptr;
-        }
-        m_secMgr->removeSection(rsI);
-    }
-    return m_rsrcMgr;
-}
-
-bool QExe::removeRsrcManager(bool keepRsrcSection)
-{
-    if (m_rsrcMgr.isNull())
-        return false;
-    if (keepRsrcSection)
-        m_rsrcMgr->toSection();
-    m_rsrcMgr = nullptr;
-    return true;
-}
-
 void QExe::updateHeaderSizes()
 {
     m_coffHead->optHeadSize = static_cast<quint16>(m_optHead->size());
     m_optHead->headerSize = m_dosStub->size() + m_coffHead->size() + m_optHead->size() + m_secMgr->headerSize();
-    if (!m_rsrcMgr.isNull())
-        m_optHead->headerSize += m_rsrcMgr->headerSize();
     m_optHead->headerSize = alignForward(m_optHead->headerSize, m_optHead->fileAlign);
 }
 
 bool QExe::updateComponents(quint32 *fileSize, QExeErrorInfo *errinfo)
 {
-    if (!m_rsrcMgr.isNull())
-        m_rsrcMgr->toSection();
     if (m_autoAddFillerSections) {
         if (!m_secMgr->test(true, nullptr, errinfo))
             return false;
@@ -323,16 +276,6 @@ void QExe::removeFillerSections()
             secsToRem += sec;
     }
     m_secMgr->removeSections(secsToRem);
-}
-
-bool QExe::autoCreateRsrcManager() const
-{
-    return m_autoCreateRsrcManager;
-}
-
-void QExe::setAutoCreateRsrcManager(bool autoCreateRsrcManager)
-{
-    m_autoCreateRsrcManager = autoCreateRsrcManager;
 }
 
 bool QExe::autoAddFillerSections() const

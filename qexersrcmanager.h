@@ -8,24 +8,21 @@
 #include "qexeerrorinfo.h"
 #include "qexersrcentry.h"
 
-class QExe;
-class QExeOptionalHeader;
-class QExeSectionManager;
 class QBuffer;
 
 class QEXE_EXPORT QExeRsrcManager : public QObject
 {
     Q_OBJECT
 public:
+    explicit QExeRsrcManager(QObject *parent = nullptr);
     quint32 headerSize() const;
+
+    bool read(QExeSectionPtr sec, QExeErrorInfo *errinfo = nullptr);
+    QExeSectionPtr toSection(quint32 sectionAlign);
+
     QExeRsrcEntryPtr root() const;
     QList<QExeRsrcEntryPtr> entriesFromPath(const QString &path) const;
 private:
-    friend class QExe;
-
-    explicit QExeRsrcManager(QExe *exeDat, QObject *parent = nullptr);
-    bool read(QExeSectionPtr sec, QExeErrorInfo *errinfo = nullptr);
-    void toSection();
     bool readDirectory(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr dir, quint32 offset);
     bool readEntry(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr dir, quint32 offset);
     class SectionSizes;
@@ -34,7 +31,6 @@ private:
     void writeDirectory(QBuffer &dst, QDataStream &ds, QExeRsrcEntryPtr dir, std::list<QExeRsrcEntryPtr> &subdirsName, std::list<QExeRsrcEntryPtr> &subdirsID, SymbolTable &symTbl);
     void writeEntries(QBuffer &dst, QDataStream &ds, std::list<QExeRsrcEntryPtr> entries, std::list<QExeRsrcEntryPtr> &subdirsName, std::list<QExeRsrcEntryPtr> &subdirsID, SymbolTable &symTbl);
     void writeSymbols(QBuffer &dst, QDataStream &ds, SectionSizes sizes, SymbolTable &symTbl, quint32 offset);
-    QExe *exeDat;
     QExeRsrcEntryPtr m_root;
 };
 

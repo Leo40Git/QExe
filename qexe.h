@@ -32,11 +32,6 @@ public:
     QSharedPointer<QExeCOFFHeader> coffHeader() const;
     QSharedPointer<QExeOptionalHeader> optionalHeader() const;
     QSharedPointer<QExeSectionManager> sectionManager() const;
-    QSharedPointer<QExeRsrcManager> rsrcManager() const;
-    QSharedPointer<QExeRsrcManager> createRsrcManager(QExeErrorInfo *errinfo = nullptr);
-    bool removeRsrcManager(bool keepRsrcSection = true);
-    bool autoCreateRsrcManager() const;
-    void setAutoCreateRsrcManager(bool autoCreateRsrcManager);
     bool autoAddFillerSections() const;
     void setAutoAddFillerSections(bool autoAddFillerSections);
 
@@ -48,13 +43,11 @@ private:
 
     void updateHeaderSizes();
     bool updateComponents(quint32 *fileSize, QExeErrorInfo *error);
-    bool m_autoCreateRsrcManager;
     bool m_autoAddFillerSections;
     QSharedPointer<QExeDOSStub> m_dosStub;
     QSharedPointer<QExeCOFFHeader> m_coffHead;
     QSharedPointer<QExeOptionalHeader> m_optHead;
     QSharedPointer<QExeSectionManager> m_secMgr;
-    QSharedPointer<QExeRsrcManager> m_rsrcMgr;
     bool isFillerSection(QExeSectionPtr sec);
     QExeSectionPtr createFillerSection(int num, quint32 addr, quint32 size);
     void addFillerSections();

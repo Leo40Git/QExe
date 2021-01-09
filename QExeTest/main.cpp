@@ -43,7 +43,6 @@ int main(int argc, char *argv[])
     (void)argc, (void)argv;
 
     QExe exeDat;
-    exeDat.setAutoCreateRsrcManager(false);
 
     QDir testDir("CaveStoryEN");
     testDir.makeAbsolute();
@@ -61,6 +60,7 @@ int main(int argc, char *argv[])
         OUT << "Details: " << errinfo.details;
         return 1;
     }
+    exeFile.close();
 
     QSharedPointer<QExeCOFFHeader> coffHead = exeDat.coffHeader();
     OUT << " == Printing COFF header properties == ";
@@ -119,20 +119,18 @@ int main(int argc, char *argv[])
     OUT << "Press <RETURN> to continue.";
     waitForEnter();
 
-    QSharedPointer<QExeRsrcManager> rsrcMgr = exeDat.rsrcManager();
-    if (!rsrcMgr) {
-        rsrcMgr = exeDat.createRsrcManager(&errinfo);
-        if (!rsrcMgr) {
-            OUT << "Error while reading \".rsrc\" section:";
+    QExeRsrcManager rsrcMgr;
+    int rsrcSecI = exeDat.sectionManager()->rsrcSectionIndex();
+    if (rsrcSecI >= 0) {
+        QExeSectionPtr rsrcSecPtr = exeDat.sectionManager()->removeSection(rsrcSecI);
+        if (!rsrcMgr.read(rsrcSecPtr, &errinfo)) {
+            OUT << "Error while reading .rsrc section:";
             OUT << "ID: " << errinfo.errorID;
             OUT << "Details: " << errinfo.details;
             return 1;
         }
-    }
-
-    if (rsrcMgr) {
         OUT << " == Printing .rsrc section contents (root directory) == ";
-        rsrcPrintDirectory(QStringLiteral(""), rsrcMgr->root());
+        rsrcPrintDirectory(QStringLiteral(""), rsrcMgr.root());
         OUT << "Press <RETURN> to continue.";
         waitForEnter();
     }

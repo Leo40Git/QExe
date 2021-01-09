@@ -14,6 +14,11 @@
 
 constexpr quint32 hiMask = 0x80000000;
 
+QExeRsrcManager::QExeRsrcManager(QObject *parent) : QObject(parent)
+{
+    m_root = QExeRsrcEntryPtr(new QExeRsrcEntry(QExeRsrcEntry::Directory));
+}
+
 quint32 QExeRsrcManager::headerSize() const
 {
     // our "header" is actually the .rsrc section's header, and section headers are always 0x28 bytes
@@ -31,12 +36,6 @@ QList<QExeRsrcEntryPtr> QExeRsrcManager::entriesFromPath(const QString &path) co
     if (p.startsWith("/"))
         p = p.mid(1);
     return m_root->fromPath(p);
-}
-
-QExeRsrcManager::QExeRsrcManager(QExe *exeDat, QObject *parent) : QObject(parent)
-{
-    this->exeDat = exeDat;
-    m_root = QExeRsrcEntryPtr(new QExeRsrcEntry(QExeRsrcEntry::Directory));
 }
 
 bool QExeRsrcManager::read(QExeSectionPtr sec, QExeErrorInfo *errinfo)
@@ -90,13 +89,14 @@ inline QString entryID(QExeRsrcEntryPtr e) {
         return e->name;
 }
 
-void QExeRsrcManager::toSection()
+QExeSectionPtr QExeRsrcManager::toSection(quint32 sectionAlign)
 {
     SymbolTable symTbl;
     SectionSizes sizes = calculateSectionSizes(m_root);
-    quint32 size = QExe::alignForward(sizes.totalSize(), exeDat->optionalHeader()->sectionAlign);
-    QExeSectionPtr sec = exeDat->sectionManager()->createSection(QLatin1String(".rsrc"), size);
-    sec->characteristics = QExeSection::ContainsInitializedData | QExeSection::IsReadable;
+    quint32 size = QExe::alignForward(sizes.totalSize(), sectionAlign);
+    QExeSectionPtr sec = QExeSectionPtr(new QExeSection(QLatin1String(".rsrc"), size,
+                                                        QExeSection::ContainsInitializedData | QExeSection::IsReadable));
+
     QBuffer buf(&sec->rawData);
     buf.open(QBuffer::WriteOnly);
     QDataStream ds(&buf);
@@ -119,6 +119,8 @@ void QExeRsrcManager::toSection()
         writeDirectory(buf, ds, entry, ignored, ignored, symTbl);
     writeSymbols(buf, ds, sizes, symTbl, sec->virtualAddr);
     buf.close();
+
+    return sec;
 }
 
 bool QExeRsrcManager::readDirectory(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr dir, quint32 offset) {
