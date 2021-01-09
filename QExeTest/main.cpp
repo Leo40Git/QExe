@@ -14,7 +14,7 @@ void rsrcPrintDirectory(const QString &indent, QExeRsrcEntryPtr dir) {
     OUT << indent << " \"Characteristics\" (reserved, must be 0): " << dir->directoryMeta.characteristics;
     OUT << indent << " Timestamp: " << dir->directoryMeta.timestamp;
     OUT << indent << " Version: " << dir->directoryMeta.version.first << "." << dir->directoryMeta.version.second;
-    QLinkedList<QExeRsrcEntryPtr> children = dir->children();
+    std::list<QExeRsrcEntryPtr> children = dir->children();
     OUT << indent << " " << children.size() << " entries:";
     QExeRsrcEntryPtr child;
     foreach (child, children) {

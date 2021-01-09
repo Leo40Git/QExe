@@ -350,11 +350,12 @@ bool QExeSectionManager::test(bool justOrderAndOverlap, quint32 *fileSize, QExeE
         return true;
     // -- Calculate file size
     *fileSize = 0;
-    std::for_each(map.begin(), map.end(), [fileSize](const AllocSpan &span) {
+    AllocSpan span = AllocSpan(0, 0);
+    foreach (span, map) {
         quint32 v = span.start + span.length;
         if (v > *fileSize)
             *fileSize = v;
-    });
+    }
     QExe::alignForward(*fileSize, fileAlign);
     return true;
 }

@@ -58,7 +58,7 @@ public:
     } directoryMeta;
 
     uint depth();
-    QLinkedList<QExeRsrcEntryPtr> children() const;
+    std::list<QExeRsrcEntryPtr> children() const;
     bool addChild(QExeRsrcEntryPtr child);
     QExeRsrcEntryPtr createChild(Type type, const QString &name);
     QExeRsrcEntryPtr createChild(Type type, quint32 id);
@@ -66,7 +66,7 @@ public:
     QExeRsrcEntryPtr child(quint32 id) const;
     QExeRsrcEntryPtr removeChild(const QString &name);
     QExeRsrcEntryPtr removeChild(quint32 id);
-    QLinkedList<QExeRsrcEntryPtr> removeAllChildren();
+    std::list<QExeRsrcEntryPtr> removeAllChildren();
     QList<QExeRsrcEntryPtr> fromPath(const QString &path) const;
 private:
     friend class QExeRsrcManager;
@@ -74,7 +74,7 @@ private:
     explicit QExeRsrcEntry(Type type, QObject *parent = nullptr);
     QExeRsrcEntryPtr m_parent;
     Type m_type;
-    QLinkedList<QExeRsrcEntryPtr> m_children;
+    std::list<QExeRsrcEntryPtr> m_children;
 };
 
 #endif // QEXERSRCENTRY_H

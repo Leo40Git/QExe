@@ -16,7 +16,7 @@ uint QExeRsrcEntry::depth()
     return ret;
 }
 
-QLinkedList<QExeRsrcEntryPtr> QExeRsrcEntry::children() const
+std::list<QExeRsrcEntryPtr> QExeRsrcEntry::children() const
 {
     return m_children;
 }
@@ -43,7 +43,7 @@ bool QExeRsrcEntry::addChild(QExeRsrcEntryPtr child)
                 return false;
         }
     }
-    m_children += child;
+    m_children.push_front(child);
     child->m_parent = QExeRsrcEntryPtr(this);
     return true;
 }
@@ -101,7 +101,7 @@ QExeRsrcEntryPtr QExeRsrcEntry::removeChild(const QString &name)
     QExeRsrcEntryPtr entry = child(name);
     if (entry.isNull())
         return entry;
-    m_children.removeOne(entry);
+    m_children.remove(entry);
     return entry;
 }
 
@@ -110,13 +110,13 @@ QExeRsrcEntryPtr QExeRsrcEntry::removeChild(quint32 id)
     QExeRsrcEntryPtr entry = child(id);
     if (entry.isNull())
         return entry;
-    m_children.removeOne(entry);
+    m_children.remove(entry);
     return entry;
 }
 
-QLinkedList<QExeRsrcEntryPtr> QExeRsrcEntry::removeAllChildren()
+std::list<QExeRsrcEntryPtr> QExeRsrcEntry::removeAllChildren()
 {
-    QLinkedList<QExeRsrcEntryPtr> ret = QLinkedList<QExeRsrcEntryPtr>(m_children);
+    std::list<QExeRsrcEntryPtr> ret = std::list<QExeRsrcEntryPtr>(m_children);
     m_children.clear();
     return ret;
 }
@@ -170,7 +170,7 @@ QList<QExeRsrcEntryPtr> QExeRsrcEntry::fromPath(const QString &path) const
         } else {
             if (part.startsWith("*")) {
                 // ID
-                quint32 id = part.mid(1).toUInt();
+                quint32 id = part.midRef(1).toUInt();
                 foreach (child, entry->children()) {
                     if (id == child->id) {
                         results.clear();
