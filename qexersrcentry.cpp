@@ -123,76 +123,14 @@ std::list<QExeRsrcEntryPtr> QExeRsrcEntry::removeAllChildren()
     return ret;
 }
 
-QList<QExeRsrcEntryPtr> QExeRsrcEntry::fromPath(const QString &path) const
-{
-    if (m_type != Directory)
-        return QList<QExeRsrcEntryPtr>();
-    QString pathT = path.trimmed();
-    if (pathT.isEmpty())
-        return QList<QExeRsrcEntryPtr>();
-    QStringList parts = path.split("/");
-    if (parts.size() < 1)
-        return QList<QExeRsrcEntryPtr>();
-    int partI = 0;
-    QExeRsrcEntryConstPtr entry = QExeRsrcEntryConstPtr(this);
-    QList<QExeRsrcEntryPtr> results;
-    QExeRsrcEntryPtr child;
-    while (partI < parts.size()) {
-        if (entry.isNull())
-            return QList<QExeRsrcEntryPtr>();
-        if (entry->type() != Directory)
-            return QList<QExeRsrcEntryPtr>();
-        QString part = parts[partI++];
-        if (part.compare("***") == 0) {
-            // wildcard: all
-            if (partI != parts.size() - 1)
-                return QList<QExeRsrcEntryPtr>();
-            foreach (child, entry->children()) {
-                results += child;
-            }
-            return results;
-        } else if (part.compare("**") == 0) {
-            // wildcard: ID
-            if (partI != parts.size() - 1)
-                return QList<QExeRsrcEntryPtr>();
-            foreach (child, entry->children()) {
-                if (child->name.isEmpty())
-                    results += child;
-            }
-            return results;
-        } else if (part.compare("*") == 0) {
-            // wildcard: name
-            if (partI != parts.size() - 1)
-                return QList<QExeRsrcEntryPtr>();
-            foreach (child, entry->children()) {
-                if (!child->name.isEmpty())
-                    results += child;
-            }
-            return results;
-        } else {
-            if (part.startsWith("*")) {
-                // ID
-                quint32 id = part.midRef(1).toUInt();
-                foreach (child, entry->children()) {
-                    if (id == child->id) {
-                        results.clear();
-                        results += child;
-                        entry = child;
-                    }
-                }
-            } else {
-                // name
-                foreach (child, entry->children()) {
-                    if (part.compare(child->name) == 0) {
-                        results.clear();
-                        results += child;
-                        entry = child;
-                    }
-                }
-            }
-        }
-    }
-    return results;
+QString QExeRsrcEntry::path() const {
+    if (m_parent.isNull())
+        return QStringLiteral("/");
+    return QString("%1%2%3").arg(
+                m_parent->path(),
+                name.isEmpty() ? QString("*%1").arg(id) : name,
+                m_type == Directory ? "/" : ""
+                );
 }
 
 QExeRsrcEntry::QExeRsrcEntry(Type type, QObject *parent) : QObject(parent)

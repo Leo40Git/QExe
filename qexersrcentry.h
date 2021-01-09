@@ -68,7 +68,8 @@ public:
     QExeRsrcEntryPtr removeChild(const QString &name);
     QExeRsrcEntryPtr removeChild(const quint32 id);
     std::list<QExeRsrcEntryPtr> removeAllChildren();
-    QList<QExeRsrcEntryPtr> fromPath(const QString &path) const;
+
+    QString path() const;
 private:
     friend class QExeRsrcManager;
 

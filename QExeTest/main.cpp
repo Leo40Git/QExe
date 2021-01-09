@@ -133,7 +133,32 @@ int main(int argc, char *argv[])
         rsrcPrintDirectory(QStringLiteral(""), rsrcMgr.root());
         OUT << "Press <RETURN> to continue.";
         waitForEnter();
+    } else
+        OUT << "No previous .rsrc section, creating new one";
+
+    /*
+    QExeRsrcEntryPtr helloDir = rsrcMgr.root()->createChildIfAbsent(QExeRsrcEntry::Directory, "HELLO");
+    if (helloDir.isNull()) {
+        OUT << ".rsrc section: Failed to create " << helloDir->path();
+        waitForEnter();
+        return 1;
     }
+    QExeRsrcEntryPtr worldDir = helloDir->createChildIfAbsent(QExeRsrcEntry::Directory, "WORLD");
+    if (helloDir.isNull()) {
+        OUT << ".rsrc section: Failed to create " << worldDir->path();
+        waitForEnter();
+        return 1;
+    }
+    QExeRsrcEntryPtr langData = worldDir->createChildIfAbsent(QExeRsrcEntry::Data, 1041);
+    if (langData.isNull()) {
+        OUT << ".rsrc section: Failed to create " << langData->path();
+        waitForEnter();
+        return 1;
+    }
+    langData->data = QByteArray("Hello world!");
+    */
+
+    exeDat.sectionManager()->addSection(rsrcMgr.toSection(exeDat.optionalHeader()->sectionAlign));
 
     QFile outNew(QStringLiteral("%1/Doukutsu.out.exe").arg(testDir.absolutePath()));
     outNew.open(QFile::WriteOnly);
@@ -146,8 +171,8 @@ int main(int argc, char *argv[])
     outNew.close();
     OUT << "Wrote new EXE to \"" << outNew.fileName() << "\"";
 
-    OUT << "Press <RETURN> to continue.";
-    waitForEnter();
+    OUT << "Press Ctrl+C to exit.";
+    while(true) { }
 
     return 0;
 }
