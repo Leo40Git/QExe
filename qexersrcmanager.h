@@ -9,6 +9,7 @@
 #include "qexersrcentry.h"
 
 class QBuffer;
+class QExe;
 
 class QEXE_EXPORT QExeRsrcManager : public QObject
 {
@@ -24,6 +25,10 @@ public:
     QList<QExeRsrcEntryPtr> entriesFromPath(const QString &path) const;
 
     static void shiftOffsets(QExeSectionPtr rsrcSec, const qint64 shift);
+
+    static bool addBeforeRsrcSection(QSharedPointer<QExeSectionManager> secMgr, QExeSectionPtr sec);
+    static bool addBeforeRsrcSection(QSharedPointer<QExeSectionManager> secMgr, const QLatin1String &name, QByteArray data, QExeSection::Characteristics chars);
+    static bool addBeforeRsrcSection(QSharedPointer<QExeSectionManager> secMgr, const QLatin1String &name, quint32 size, QExeSection::Characteristics chars);
 private:
     bool readDirectory(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr dir, quint32 offset);
     bool readEntry(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr dir, quint32 offset);
@@ -35,7 +40,7 @@ private:
     void writeSymbols(QBuffer &dst, QDataStream &ds, SectionSizes sizes, SymbolTable &symTbl, quint32 offset);
     QExeRsrcEntryPtr m_root;
 
-    static void shiftOffsets0(QBuffer &buf, QDataStream &ds, const qint64 shift);
+    static void shiftDirectory(QBuffer &buf, QDataStream &ds, const qint64 shift);
 };
 
 #endif // QEXERSRCMANAGER_H

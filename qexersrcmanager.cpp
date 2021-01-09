@@ -43,11 +43,11 @@ void QExeRsrcManager::shiftOffsets(QExeSectionPtr rsrcSec, const qint64 shift)
     QBuffer buf(rsrcSec.data());
     buf.open(QBuffer::ReadWrite);
     QDataStream ds(&buf);
-    shiftOffsets0(buf, ds, shift);
+    shiftDirectory(buf, ds, shift);
     buf.close();
 }
 
-void QExeRsrcManager::shiftOffsets0(QBuffer &buf, QDataStream &ds, const qint64 shift)
+void QExeRsrcManager::shiftDirectory(QBuffer &buf, QDataStream &ds, const qint64 shift)
 {
     quint16 entriesID, entriesName;
     buf.seek(buf.pos() + 12);
@@ -60,7 +60,7 @@ void QExeRsrcManager::shiftOffsets0(QBuffer &buf, QDataStream &ds, const qint64 
         qint64 pos = buf.pos();
         if ((rva & hiMask) != 0) {
             buf.seek(rva & ~hiMask);
-            shiftOffsets0(buf, ds, shift);
+            shiftDirectory(buf, ds, shift);
         } else {
             buf.seek(rva);
             quint32 val;
@@ -70,6 +70,33 @@ void QExeRsrcManager::shiftOffsets0(QBuffer &buf, QDataStream &ds, const qint64 
         }
         buf.seek(pos);
     }
+}
+
+bool QExeRsrcManager::addBeforeRsrcSection(QSharedPointer<QExeSectionManager> secMgr, QExeSectionPtr sec)
+{
+    QExeSectionPtr rsrcSec = secMgr->removeSection(secMgr->rsrcSectionIndex());
+    quint32 oldRVA = 0;
+    if (!rsrcSec.isNull())
+        oldRVA = rsrcSec->virtualAddr;
+    if (!secMgr->addSection(sec)) {
+        secMgr->addSection(rsrcSec);
+        return false;
+    }
+    if (!rsrcSec.isNull()) {
+        secMgr->addSection(rsrcSec);
+        shiftOffsets(rsrcSec, rsrcSec->virtualAddr - oldRVA);
+    }
+    return true;
+}
+
+bool QExeRsrcManager::addBeforeRsrcSection(QSharedPointer<QExeSectionManager> secMgr, const QLatin1String &name, QByteArray data, QExeSection::Characteristics chars)
+{
+    return addBeforeRsrcSection(secMgr, QExeSectionPtr(new QExeSection(name, data, chars)));
+}
+
+bool QExeRsrcManager::addBeforeRsrcSection(QSharedPointer<QExeSectionManager> secMgr, const QLatin1String &name, quint32 size, QExeSection::Characteristics chars)
+{
+    return addBeforeRsrcSection(secMgr, QExeSectionPtr(new QExeSection(name, size, chars)));
 }
 
 bool QExeRsrcManager::read(QExeSectionPtr sec, QExeErrorInfo *errinfo)
