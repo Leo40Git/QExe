@@ -57,15 +57,16 @@ public:
         Version16 version;
     } directoryMeta;
 
-    uint depth();
     std::list<QExeRsrcEntryPtr> children() const;
     bool addChild(QExeRsrcEntryPtr child);
     QExeRsrcEntryPtr createChild(Type type, const QString &name);
-    QExeRsrcEntryPtr createChild(Type type, quint32 id);
+    QExeRsrcEntryPtr createChild(Type type, const quint32 id);
+    QExeRsrcEntryPtr createChildIfAbsent(Type type, const QString &name);
+    QExeRsrcEntryPtr createChildIfAbsent(Type type, const quint32 id);
     QExeRsrcEntryPtr child(const QString &name) const;
-    QExeRsrcEntryPtr child(quint32 id) const;
+    QExeRsrcEntryPtr child(const quint32 id) const;
     QExeRsrcEntryPtr removeChild(const QString &name);
-    QExeRsrcEntryPtr removeChild(quint32 id);
+    QExeRsrcEntryPtr removeChild(const quint32 id);
     std::list<QExeRsrcEntryPtr> removeAllChildren();
     QList<QExeRsrcEntryPtr> fromPath(const QString &path) const;
 private:

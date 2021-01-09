@@ -166,21 +166,22 @@ QExeSectionPtr QExeRsrcManager::toSection(quint32 sectionAlign)
     QDataStream ds(&buf);
     ds.setByteOrder(QDataStream::LittleEndian);
     // write root directory
-    std::list<QExeRsrcEntryPtr> rootDirsName, rootDirsID;
-    writeDirectory(buf, ds, m_root, rootDirsName, rootDirsID, symTbl);
-    // write subdirectories of root
     std::list<QExeRsrcEntryPtr> subdirsName, subdirsID;
+    writeDirectory(buf, ds, m_root, subdirsName, subdirsID, symTbl);
+    // write subdirectories until we can't anymore
+    std::list<QExeRsrcEntryPtr> nextSubdirsName, nextSubdirsID;
     QExeRsrcEntryPtr entry;
-    foreach (entry, rootDirsName)
-        writeDirectory(buf, ds, entry, subdirsName, subdirsID, symTbl);
-    foreach (entry, rootDirsID)
-        writeDirectory(buf, ds, entry, subdirsName, subdirsID, symTbl);
-    // finally, write subdirs of subdirs of root
-    std::list<QExeRsrcEntryPtr> ignored;
-    foreach (entry, subdirsName)
-        writeDirectory(buf, ds, entry, ignored, ignored, symTbl);
-    foreach (entry, subdirsID)
-        writeDirectory(buf, ds, entry, ignored, ignored, symTbl);
+    while (!subdirsName.empty() && !subdirsID.empty()) {
+        foreach (entry, subdirsName)
+            writeDirectory(buf, ds, entry, nextSubdirsName, nextSubdirsID, symTbl);
+        foreach (entry, subdirsID)
+            writeDirectory(buf, ds, entry, nextSubdirsName, nextSubdirsID, symTbl);
+        subdirsName = nextSubdirsName;
+        nextSubdirsName.clear();
+        subdirsID = nextSubdirsID;
+        nextSubdirsID.clear();
+    }
+    // finally, write symbols
     writeSymbols(buf, ds, sizes, symTbl, sec->virtualAddr);
     buf.close();
 
@@ -242,9 +243,6 @@ bool QExeRsrcManager::readEntry(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr 
         child->data = src.read(dataSize);
     } else {
         // directory
-        if (dir->depth() == 2)
-            // max depth is 2
-            return false;
         dataOff &= ~hiMask;
         child->m_type = QExeRsrcEntry::Directory;
         src.seek(dataOff);

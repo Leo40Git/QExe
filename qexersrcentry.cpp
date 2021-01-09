@@ -5,17 +5,6 @@ QExeRsrcEntry::Type QExeRsrcEntry::type() const
     return m_type;
 }
 
-uint QExeRsrcEntry::depth()
-{
-    uint ret = 0;
-    QExeRsrcEntryPtr cur = m_parent;
-    while (cur) {
-        ret++;
-        cur = cur->m_parent;
-    }
-    return ret;
-}
-
 std::list<QExeRsrcEntryPtr> QExeRsrcEntry::children() const
 {
     return m_children;
@@ -24,9 +13,6 @@ std::list<QExeRsrcEntryPtr> QExeRsrcEntry::children() const
 bool QExeRsrcEntry::addChild(QExeRsrcEntryPtr child)
 {
     if (m_type != Directory || child.isNull())
-        return false;
-    if (child->type() == Directory && depth() == 2)
-        // max depth is 2
         return false;
     QExeRsrcEntryPtr entry;
     QString childName = child->name;
@@ -52,9 +38,6 @@ QExeRsrcEntryPtr QExeRsrcEntry::createChild(QExeRsrcEntry::Type type, const QStr
 {
     if (m_type != Directory)
         return nullptr;
-    if (type == Directory && depth() == 2)
-        // max depth is 2
-        return nullptr;
     QExeRsrcEntryPtr child = QExeRsrcEntryPtr(new QExeRsrcEntry(type));
     child->name = name;
     if (!addChild(child))
@@ -62,18 +45,37 @@ QExeRsrcEntryPtr QExeRsrcEntry::createChild(QExeRsrcEntry::Type type, const QStr
     return child;
 }
 
-QExeRsrcEntryPtr QExeRsrcEntry::createChild(QExeRsrcEntry::Type type, quint32 id)
+QExeRsrcEntryPtr QExeRsrcEntry::createChild(QExeRsrcEntry::Type type, const quint32 id)
 {
     if (m_type != Directory)
-        return nullptr;
-    if (type == Directory && depth() == 2)
-        // max depth is 2
         return nullptr;
     QExeRsrcEntryPtr child = QExeRsrcEntryPtr(new QExeRsrcEntry(type));
     child->id = id;
     if (!addChild(child))
         return nullptr;
     return child;
+}
+
+QExeRsrcEntryPtr QExeRsrcEntry::createChildIfAbsent(QExeRsrcEntry::Type type, const QString &name)
+{
+    QExeRsrcEntryPtr ret = createChild(type, name);
+    if (ret.isNull()) {
+        ret = child(name);
+        if (ret->type() != type)
+            ret = nullptr;
+    }
+    return ret;
+}
+
+QExeRsrcEntryPtr QExeRsrcEntry::createChildIfAbsent(QExeRsrcEntry::Type type, const quint32 id)
+{
+    QExeRsrcEntryPtr ret = createChild(type, id);
+    if (ret.isNull()) {
+        ret = child(id);
+        if (ret->type() != type)
+            ret = nullptr;
+    }
+    return ret;
 }
 
 QExeRsrcEntryPtr QExeRsrcEntry::child(const QString &name) const
@@ -86,7 +88,7 @@ QExeRsrcEntryPtr QExeRsrcEntry::child(const QString &name) const
     return nullptr;
 }
 
-QExeRsrcEntryPtr QExeRsrcEntry::child(quint32 id) const
+QExeRsrcEntryPtr QExeRsrcEntry::child(const quint32 id) const
 {
     QExeRsrcEntryPtr entry;
     foreach (entry, m_children) {
@@ -105,7 +107,7 @@ QExeRsrcEntryPtr QExeRsrcEntry::removeChild(const QString &name)
     return entry;
 }
 
-QExeRsrcEntryPtr QExeRsrcEntry::removeChild(quint32 id)
+QExeRsrcEntryPtr QExeRsrcEntry::removeChild(const quint32 id)
 {
     QExeRsrcEntryPtr entry = child(id);
     if (entry.isNull())
