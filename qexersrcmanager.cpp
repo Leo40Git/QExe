@@ -66,7 +66,7 @@ void QExeRsrcManager::shiftOffsets0(QBuffer &buf, QDataStream &ds, const qint64 
             quint32 val;
             ds >> val;
             buf.seek(rva);
-            ds << val + shift;
+            ds << static_cast<quint32>(val + shift);
         }
         buf.seek(pos);
     }
