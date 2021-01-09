@@ -116,7 +116,7 @@ QExeRsrcEntryPtr QExeRsrcEntry::removeChild(quint32 id)
 
 std::list<QExeRsrcEntryPtr> QExeRsrcEntry::removeAllChildren()
 {
-    std::list<QExeRsrcEntryPtr> ret = std::list<QExeRsrcEntryPtr>(m_children);
+    std::list<QExeRsrcEntryPtr> ret = m_children;
     m_children.clear();
     return ret;
 }
