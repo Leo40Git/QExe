@@ -19,56 +19,48 @@ QExeRsrcManager::QExeRsrcManager(QObject *parent) : QObject(parent)
     m_root = QExeRsrcEntryPtr(new QExeRsrcEntry(QExeRsrcEntry::Directory));
 }
 
-quint32 QExeRsrcManager::headerSize() const
-{
-    // our "header" is actually the .rsrc section's header, and section headers are always 0x28 bytes
-    return 0x28;
-}
-
 QExeRsrcEntryPtr QExeRsrcManager::root() const
 {
     return m_root;
 }
 
-QList<QExeRsrcEntryPtr> QExeRsrcManager::entriesFromPath(const QString &path) const
+void QExeRsrcManager::correctOffsets(QExeSectionPtr rsrcSec, const qint64 shift)
 {
-    QString p = path;
-    if (p.startsWith("/"))
-        p = p.mid(1);
-    return m_root->fromPath(p);
-}
-
-void QExeRsrcManager::shiftOffsets(QExeSectionPtr rsrcSec, const qint64 shift)
-{
-    QBuffer buf(rsrcSec.data());
+    QBuffer buf(&rsrcSec->rawData);
     buf.open(QBuffer::ReadWrite);
     QDataStream ds(&buf);
-    shiftDirectory(buf, ds, shift);
+    ds.setByteOrder(QDataStream::LittleEndian);
+    shiftDirectory(buf, ds, shift, 0);
     buf.close();
 }
 
-void QExeRsrcManager::shiftDirectory(QBuffer &buf, QDataStream &ds, const qint64 shift)
+void QExeRsrcManager::shiftDirectory(QBuffer &buf, QDataStream &ds, const qint64 shift, const quint32 ptr)
 {
-    quint16 entriesID, entriesName;
-    buf.seek(buf.pos() + 12);
+    buf.seek(ptr + 12);
+    quint16 entriesName, entriesID;
     ds >> entriesName;
     ds >> entriesID;
-    quint16 entries = entriesID + entriesName;
-    for (quint16 i = 0; i < entries; i++) {
-        quint32 rva;
-        ds >> rva;
-        qint64 pos = buf.pos();
-        if ((rva & hiMask) != 0) {
-            buf.seek(rva & ~hiMask);
-            shiftDirectory(buf, ds, shift);
-        } else {
-            buf.seek(rva);
+    const quint32 entries = entriesName + entriesID;
+
+    quint32 results[entries];
+    for (quint32 i = 0; i < entries; i++) {
+        quint32 result;
+        ds >> result; // throw this one away
+        ds >> result;
+        results[i] = result;
+    }
+
+    for (quint32 i = 0; i < entries; i++) {
+        if ((results[i] & hiMask) != 0)
+            shiftDirectory(buf, ds, shift, results[i] & ~hiMask);
+        else {
+            buf.seek(results[i]);
             quint32 val;
             ds >> val;
-            buf.seek(rva);
-            ds << static_cast<quint32>(val + shift);
+            buf.seek(results[i]);
+            val += shift;
+            ds << val;
         }
-        buf.seek(pos);
     }
 }
 
@@ -87,7 +79,7 @@ bool QExeRsrcManager::addBeforeRsrcSection(QSharedPointer<QExeSectionManager> se
             // this can only fail if .rsrc already exists
             // since we removed it earlier, assume the user just added their own .rsrc section
             // and don't bother correcting the "old" one
-            shiftOffsets(rsrcSec, rsrcSec->virtualAddr - oldRVA);
+            correctOffsets(rsrcSec, rsrcSec->virtualAddr - oldRVA);
     }
     return true;
 }
@@ -146,16 +138,29 @@ public:
     QHash<QString, QList<qint64>> stringRefs;
 };
 
-inline QString entryID(QExeRsrcEntryPtr e) {
-    if (e->name.isEmpty())
-        return QString("0x%1").arg(QString::number(e->id, 16).toUpper());
-    else
-        return e->name;
-}
+class QExeRsrcManager::SubdirStorage {
+public:
+    std::list<QExeRsrcEntryPtr> id;
+    std::list<QExeRsrcEntryPtr> name;
 
-#include <QDebug>
-#define OUT qInfo().noquote().nospace()
-#define HEX(n) "0x" << QString::number(n, 16).toUpper()
+    void add(QExeRsrcEntryPtr subdir) {
+        if (subdir->name.isEmpty())
+            id.push_front(subdir);
+        else
+            name.push_front(subdir);
+    }
+
+    bool empty() {
+        return id.empty() && name.empty();
+    }
+
+    void move(SubdirStorage &from) {
+        id = from.id;
+        from.id.clear();
+        name = from.name;
+        from.name.clear();
+    }
+};
 
 QExeSectionPtr QExeRsrcManager::toSection(quint32 sectionAlign)
 {
@@ -165,14 +170,37 @@ QExeSectionPtr QExeRsrcManager::toSection(quint32 sectionAlign)
     QExeSectionPtr sec = QExeSectionPtr(new QExeSection(QLatin1String(".rsrc"), size,
                                                         QExeSection::ContainsInitializedData | QExeSection::IsReadable));
 
-    QBuffer buf(&sec->rawData);
-    buf.open(QBuffer::WriteOnly);
-    QDataStream ds(&buf);
+    QBuffer dst(&sec->rawData);
+    dst.open(QBuffer::WriteOnly);
+    QDataStream ds(&dst);
     ds.setByteOrder(QDataStream::LittleEndian);
-    // TODO
-    buf.close();
+    // write root directory
+    SubdirStorage subdirs;
+    writeDirectory(dst, ds, m_root, subdirs, symTbl);
+    // write subdirectories until we can't
+    SubdirStorage nextSubdirs;
+    QExeRsrcEntryPtr entry;
+    while (!subdirs.empty()) {
+        foreach (entry, subdirs.name)
+            writeDirectory(dst, ds, entry, nextSubdirs, symTbl);
+        foreach (entry, subdirs.id)
+            writeDirectory(dst, ds, entry, nextSubdirs, symTbl);
+        subdirs.move(nextSubdirs);
+    }
+    // write symbols
+    writeSymbols(dst, ds, sizes, symTbl);
+    dst.close();
 
     return sec;
+}
+
+bool QExeRsrcManager::toSection(QExe &exeDat)
+{
+    QExeSectionPtr sec = toSection(exeDat.optionalHeader()->sectionAlign);
+    if (!exeDat.sectionManager()->addSection(sec))
+        return false;
+    correctOffsets(sec, sec->virtualAddr);
+    return true;
 }
 
 bool QExeRsrcManager::readDirectory(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr dir, quint32 offset) {
@@ -191,7 +219,7 @@ bool QExeRsrcManager::readDirectory(QBuffer &src, QDataStream &ds, QExeRsrcEntry
     return true;
 }
 
-bool QExeRsrcManager::readEntry(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr dir, quint32 offset)
+bool QExeRsrcManager::readEntry(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr entry, quint32 offset)
 {
     QExeRsrcEntryPtr child = QExeRsrcEntryPtr(new QExeRsrcEntry(QExeRsrcEntry::Data));
 
@@ -237,7 +265,7 @@ bool QExeRsrcManager::readEntry(QBuffer &src, QDataStream &ds, QExeRsrcEntryPtr 
             return false;
     }
     src.seek(prevPos);
-    return dir->addChild(child);
+    return entry->addChild(child);
 }
 
 const quint32 rsrcDataAlign = 4; // .rsrc data is aligned to DWORD boundary
@@ -267,4 +295,115 @@ QExeRsrcManager::SectionSizes QExeRsrcManager::calculateSectionSizes(QExeRsrcEnt
         }
     }
     return sz;
+}
+
+void QExeRsrcManager::writeDirectory(QBuffer &dst, QDataStream &ds, QExeRsrcEntryPtr dir, QExeRsrcManager::SubdirStorage &subdirs, QExeRsrcManager::SymbolTable &symTbl)
+{
+    symTbl.directories.push_front(dir);
+    symTbl.directoryOffs[dir] = static_cast<quint32>(dst.pos());
+    // write unimportant stuff
+    ds << dir->directoryMeta.characteristics;
+    ds << dir->directoryMeta.timestamp;
+    ds << dir->directoryMeta.version;
+    // count entries, save subdirectories for later
+    quint16 entryCountName = 0, entryCountID = 0;
+    std::list<QExeRsrcEntryPtr> entriesID, entriesName;
+    QExeRsrcEntryPtr entry;
+    foreach (entry, dir->children()) {
+        if (entry->name.isEmpty()) {
+            entryCountID++;
+            entriesID.push_front(entry);
+        } else {
+            entryCountName++;
+            entriesName.push_front(entry);
+        }
+        if (entry->type() == QExeRsrcEntry::Directory)
+            subdirs.add(entry);
+    }
+    // write entry counts
+    ds << entryCountName;
+    ds << entryCountID;
+    // write entries
+    writeEntries(dst, ds, entriesName, symTbl);
+    writeEntries(dst, ds, entriesID, symTbl);
+}
+
+void QExeRsrcManager::writeEntries(QBuffer &dst, QDataStream &ds, std::list<QExeRsrcEntryPtr> &entries, QExeRsrcManager::SymbolTable &symTbl)
+{
+    QExeRsrcEntryPtr entry;
+    foreach (entry, entries) {
+        if (entry->name.isEmpty())
+            ds << entry->id;
+        else {
+            symTbl.strings.push_front(entry->name);
+            symTbl.stringRefs[entry->name] += dst.pos();
+            ds << hiMask;
+        }
+        if (entry->type() == QExeRsrcEntry::Directory) {
+            symTbl.directoryRefs[entry] += dst.pos();
+            ds << hiMask;
+        } else {
+            symTbl.dataDescs.push_front(entry);
+            symTbl.dataDescRefs[entry] += dst.pos();
+            ds << static_cast<quint32>(0);
+            ds << static_cast<quint32>(entry->data.size());
+            ds << entry->dataMeta.codepage;
+            ds << entry->dataMeta.reserved;
+        }
+    }
+}
+
+void QExeRsrcManager::writeSymbols(QBuffer &dst, QDataStream &ds, const QExeRsrcManager::SectionSizes &sizes, QExeRsrcManager::SymbolTable &symTbl)
+{
+    // write directroy references
+    QExeRsrcEntryPtr entry;
+    foreach (entry, symTbl.directories) {
+        quint32 v = symTbl.directoryOffs[entry] | hiMask;
+        qint64 pos;
+        foreach (pos, symTbl.directoryRefs[entry]) {
+            dst.seek(pos);
+            ds << v;
+        }
+    }
+    // write actual data, remember offsets
+    QMap<QExeRsrcEntryPtr, quint32> dataPtrs;
+    dst.seek(sizes.directorySize + sizes.dataDescSize + sizes.stringSize);
+    QExeRsrcEntryPtr dataDesc;
+    foreach (dataDesc, symTbl.dataDescs) {
+        dataPtrs[dataDesc] = static_cast<quint32>(dst.pos());
+        dst.write(dataDesc->data);
+        dst.seek(QExe::alignForward(static_cast<quint32>(dst.pos()), rsrcDataAlign));
+    }
+    // write data descriptions and their references
+    dst.seek(sizes.directorySize);
+    foreach (dataDesc, symTbl.dataDescs) {
+        quint32 prevPos = static_cast<quint32>(dst.pos());
+        qint64 pos;
+        foreach (pos, symTbl.dataDescRefs[dataDesc]) {
+            dst.seek(pos);
+            ds << prevPos;
+        }
+        dst.seek(prevPos);
+        quint32 dataPtr = dataPtrs[dataDesc];
+        ds << dataPtr;
+        ds << static_cast<quint32>(dataDesc->data.size());
+        ds << dataDesc->dataMeta.codepage;
+        ds << dataDesc->dataMeta.reserved;
+    }
+    // write strings and their references
+    QTextEncoder *encoder = QTextCodec::codecForName("UTF-16LE")->makeEncoder(QTextCodec::IgnoreHeader);
+    dst.seek(sizes.directorySize + sizes.dataDescSize);
+    QString str;
+    foreach (str, symTbl.strings) {
+        quint32 prevPos = static_cast<quint32>(dst.pos());
+        quint32 v = prevPos | hiMask;
+        qint64 pos;
+        foreach (pos, symTbl.stringRefs[str]) {
+            dst.seek(pos);
+            ds << v;
+        }
+        dst.seek(prevPos);
+        ds << static_cast<quint16>(str.size());
+        dst.write(encoder->fromUnicode(str));
+    }
 }

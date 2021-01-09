@@ -136,7 +136,6 @@ int main(int argc, char *argv[])
     } else
         OUT << "No previous .rsrc section, creating new one";
 
-    /*
     QExeRsrcEntryPtr helloDir = rsrcMgr.root()->createChildIfAbsent(QExeRsrcEntry::Directory, "HELLO");
     if (helloDir.isNull()) {
         OUT << ".rsrc section: Failed to create " << helloDir->path();
@@ -156,9 +155,11 @@ int main(int argc, char *argv[])
         return 1;
     }
     langData->data = QByteArray("Hello world!");
-    */
 
-    exeDat.sectionManager()->addSection(rsrcMgr.toSection(exeDat.optionalHeader()->sectionAlign));
+    if (!rsrcMgr.toSection(exeDat)) {
+        OUT << "Failed to add new .rsrc section";
+        return 1;
+    }
 
     QFile outNew(QStringLiteral("%1/Doukutsu.out.exe").arg(testDir.absolutePath()));
     outNew.open(QFile::WriteOnly);
