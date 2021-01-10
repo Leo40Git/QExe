@@ -211,7 +211,7 @@ bool QExe::updateComponents(quint32 *fileSize, QExeErrorInfo *errinfo)
             }
         } else if (QString(".text").compare(secName) == 0)
             m_optHead->codeBaseAddr = section->virtualAddr;
-        else if (QString(".rdata").compare(secName) == 0)
+        else if (!m_optHead->isPlus && QString(".rdata").compare(secName) == 0)
             m_optHead->dataBaseAddr = section->virtualAddr;
         if (section->characteristics.testFlag(QExeSection::ContainsCode))
             m_optHead->codeSize += section->virtualSize;

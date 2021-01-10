@@ -59,11 +59,14 @@ public:
     Q_FLAG(DLLCharacteristics)
 
     quint32 size() const;
+    // Standard
+    bool isPlus;
     Version8 linkerVer;
     quint32 entryPointAddr;
     quint32 codeBaseAddr;
-    quint32 dataBaseAddr;
-    quint32 imageBase;
+    quint32 dataBaseAddr; // present in PE32, not in PE32+
+    // Windows only
+    quint64 imageBase; // quint32 in PE32
     quint32 sectionAlign;
     quint32 fileAlign;
     Version16 minOSVer;
@@ -73,10 +76,10 @@ public:
     quint32 checksum;
     Subsystem subsystem;
     DLLCharacteristics dllCharacteristics;
-    quint32 stackReserveSize;
-    quint32 stackCommitSize;
-    quint32 heapReserveSize;
-    quint32 heapCommitSize;
+    quint64 stackReserveSize; // quint32 in PE32
+    quint64 stackCommitSize; // quint32 in PE32
+    quint64 heapReserveSize; // quint32 in PE32
+    quint64 heapCommitSize; // quint32 in PE32
     quint32 loaderFlags; // reserved, must be 0
     // https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#optional-header-data-directories-image-only
     enum DataDirectories : int {

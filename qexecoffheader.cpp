@@ -12,6 +12,10 @@ QExeCOFFHeader::QExeCOFFHeader(QExe *exeDat, QObject *parent) : QObject(parent)
     this->exeDat = exeDat;
 
     machineType = I386;
+    timestamp = 0;
+    symTblPtr = 0;
+    symTblCount = 0;
+    characteristics = Characteristics();
 }
 
 bool QExeCOFFHeader::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *errinfo)

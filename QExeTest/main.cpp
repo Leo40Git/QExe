@@ -43,10 +43,12 @@ void dumpExeDat(QExe &exeDat) {
     OUT << " Characteristics: " << coffHead->characteristics;
     QSharedPointer<QExeOptionalHeader> optHead = exeDat.optionalHeader();
     OUT << " == Printing optional header properties == ";
+    OUT << " Magic: " << (optHead->isPlus ? "PE32+" : "PE32");
     OUT << " Linker version: " << optHead->linkerVer.first << "." << optHead->linkerVer.second;
     OUT << " Address of entry point: " << HEX(optHead->entryPointAddr);
     OUT << " Base of code address: " << HEX(optHead->codeBaseAddr);
-    OUT << " Base of data address: " << HEX(optHead->dataBaseAddr);
+    if (!optHead->isPlus)
+        OUT << " Base of data address: " << HEX(optHead->dataBaseAddr);
     OUT << " Image base: " << HEX(optHead->imageBase);
     OUT << " Section alignment: " << HEX(optHead->sectionAlign);
     OUT << " File alignment: " << HEX(optHead->fileAlign);

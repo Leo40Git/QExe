@@ -18,22 +18,40 @@ QExeOptionalHeader::QExeOptionalHeader(QExe *exeDat, QObject *parent) : QObject(
 {
     this->exeDat = exeDat;
 
+    // Standard
+    isPlus = false;
     linkerVer.first = 2;
     linkerVer.second = 0x38;
+    entryPointAddr = 0;
+    codeBaseAddr = 0;
+    dataBaseAddr = 0;
+    // Windows only
+    imageBase = 0x400000;
+    sectionAlign = 0x100;
+    fileAlign = 0x100;
     minOSVer = subsysVer = OSVersion::Windows95;
+    imageVer = Version16(0, 0);
+    subsysVer = Version16(0, 0);
+    win32VerValue = 0;
+    checksum = 0;
     subsystem = WinCUI;
+    dllCharacteristics = DLLCharacteristics();
     stackReserveSize = 0x200000;
     stackCommitSize = 0x1000;
     heapReserveSize = 0x100000;
     heapCommitSize = 0x1000;
+    loaderFlags = 0;
+    // Data directories
+    dataDirectories.clear();
 }
 
 bool QExeOptionalHeader::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *errinfo) {
     (void)src;
-    // check if this is a PE32 file
+    // check if this is a PE32(+) file
     quint16 magic;
     ds >> magic;
-    if (magic != 0x10B) {
+    isPlus = magic == 0x20B;
+    if (magic != 0x10B && !isPlus) {
         if (errinfo != nullptr) {
             errinfo->errorID = QExeErrorInfo::BadPEFile_InvalidMagic;
             errinfo->details += magic;
@@ -48,9 +66,15 @@ bool QExeOptionalHeader::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *er
     ds >> uninitializedDataSize;
     ds >> entryPointAddr;
     ds >> codeBaseAddr;
-    ds >> dataBaseAddr;
+    if (!isPlus)
+        ds >> dataBaseAddr;
     // Windows only
-    ds >> imageBase;
+    if (isPlus)
+        ds >> imageBase;
+    else {
+        imageBase = 0;
+        ds >> (quint32 &) imageBase;
+    }
     ds >> sectionAlign;
     ds >> fileAlign;
     ds >> minOSVer;
@@ -64,10 +88,21 @@ bool QExeOptionalHeader::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *er
     quint16 dllCharsRaw;
     ds >> dllCharsRaw;
     dllCharacteristics = static_cast<DLLCharacteristics>(dllCharsRaw);
-    ds >> stackReserveSize;
-    ds >> stackCommitSize;
-    ds >> heapReserveSize;
-    ds >> heapCommitSize;
+    if (isPlus) {
+        ds >> stackReserveSize;
+        ds >> stackCommitSize;
+        ds >> heapReserveSize;
+        ds >> heapCommitSize;
+    } else {
+        stackReserveSize = 0;
+        ds >> (quint32 &) stackReserveSize;
+        stackCommitSize = 0;
+        ds >> (quint32 &) stackCommitSize;
+        heapReserveSize = 0;
+        ds >> (quint32 &) heapReserveSize;
+        heapCommitSize = 0;
+        ds >> (quint32 &) heapCommitSize;
+    }
     ds >> loaderFlags;
     quint32 dirCount;
     ds >> dirCount;
@@ -85,16 +120,20 @@ bool QExeOptionalHeader::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *er
 bool QExeOptionalHeader::write(QIODevice &dst, QDataStream &ds, QExeErrorInfo *errinfo)
 {
     (void)dst, (void)errinfo;
-    ds << static_cast<quint16>(0x10B);
+    ds << static_cast<quint16>(isPlus ? 0x20B : 0x10B);
     ds << linkerVer;
     ds << codeSize;
     ds << initializedDataSize;
     ds << uninitializedDataSize;
     ds << entryPointAddr;
     ds << codeBaseAddr;
-    ds << dataBaseAddr;
+    if (!isPlus)
+        ds << dataBaseAddr;
     // Windows specific
-    ds << imageBase;
+    if (isPlus)
+        ds << imageBase;
+    else
+        ds << static_cast<quint32>(imageBase);
     ds << sectionAlign;
     ds << fileAlign;
     ds << minOSVer;
@@ -106,10 +145,17 @@ bool QExeOptionalHeader::write(QIODevice &dst, QDataStream &ds, QExeErrorInfo *e
     ds << checksum;
     ds << (quint16 &) subsystem;
     ds << static_cast<quint16>(dllCharacteristics);
-    ds << stackReserveSize;
-    ds << stackCommitSize;
-    ds << heapReserveSize;
-    ds << heapCommitSize;
+    if (isPlus) {
+        ds << stackReserveSize;
+        ds << stackCommitSize;
+        ds << heapReserveSize;
+        ds << heapCommitSize;
+    } else {
+        ds << static_cast<quint32>(stackReserveSize);
+        ds << static_cast<quint32>(stackCommitSize);
+        ds << static_cast<quint32>(heapReserveSize);
+        ds << static_cast<quint32>(heapCommitSize);
+    }
     ds << loaderFlags;
     ds << static_cast<quint32>(dataDirectories.size());
     // Data directories
