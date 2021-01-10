@@ -60,7 +60,7 @@ public:
 
     quint32 size() const;
     // Standard
-    bool isPlus;
+    bool isPlus; // true if PE32+, false if PE32
     Version8 linkerVer;
     quint32 entryPointAddr;
     quint32 codeBaseAddr;
