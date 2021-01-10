@@ -2,6 +2,12 @@
 
 QExeSection::QExeSection(QObject *parent) : QObject(parent)
 {
+    setName(QLatin1String(""));
+    virtualAddr = 0;
+    virtualSize = 0;
+    rawDataPtr = 0;
+    rawData.resize(0);
+    characteristics = Characteristics();
     linearize = false;
 }
 
@@ -9,8 +15,10 @@ QExeSection::QExeSection(const QLatin1String &name, QByteArray data, QExeSection
     : QObject(parent)
 {
     setName(name);
-    rawData = data;
+    virtualAddr = 0;
     virtualSize = rawData.size();
+    rawData = data;
+    rawDataPtr = 0;
     characteristics = chars;
     linearize = false;
 }
@@ -19,8 +27,10 @@ QExeSection::QExeSection(const QLatin1String &name, quint32 size, QExeSection::C
     : QObject(parent)
 {
     setName(name);
+    virtualAddr = 0;
     virtualSize = size;
     rawData.resize(static_cast<int>(size));
+    rawDataPtr = 0;
     characteristics = chars;
     linearize = false;
 }

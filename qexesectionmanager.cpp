@@ -2,8 +2,9 @@
 
 #include <QBuffer>
 #include <QtEndian>
-#include <QLinkedList>
 #include <QDataStream>
+
+#include <algorithm>
 
 #include "qexe.h"
 
@@ -155,7 +156,8 @@ QExeSectionPtr QExeSectionManager::createSectionInternal(QExeSectionPtr newSec)
     int secs;
     if ((secs = sectionCount()) > 0) {
         QExeSectionPtr lastSec = sections[secs - 1];
-        newSec->virtualAddr = QExe::alignForward(lastSec->virtualAddr + lastSec->virtualSize, exeDat->optionalHeader()->sectionAlign);
+        newSec->virtualAddr = lastSec->virtualAddr;
+        newSec->virtualAddr += QExe::alignForward(lastSec->virtualSize, exeDat->optionalHeader()->sectionAlign);
     }
     if (!addSection(newSec))
         return nullptr;
@@ -197,10 +199,6 @@ QExeSectionManager::QExeSectionManager(QExe *exeDat, QObject *parent) : QObject(
     this->exeDat = exeDat;
 }
 
-bool sectionVALessThan(const QSharedPointer<QExeSection> &s1, const QSharedPointer<QExeSection> &s2) {
-    return s1->virtualAddr < s2->virtualAddr;
-}
-
 bool QExeSectionManager::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *errinfo)
 {
     (void)errinfo;
@@ -230,9 +228,7 @@ bool QExeSectionManager::read(QIODevice &src, QDataStream &ds, QExeErrorInfo *er
         newSec->characteristics = static_cast<QExeSection::Characteristics>(charsRaw);
         sections += newSec;
     }
-    // sort sections by RVA
-    std::sort(sections.begin(), sections.end(), sectionVALessThan);
-    return true;
+    return test(true, nullptr, errinfo);
 }
 
 bool QExeSectionManager::write(QIODevice &dst, QDataStream &ds, QExeErrorInfo *errinfo)
@@ -263,7 +259,7 @@ bool QExeSectionManager::write(QIODevice &dst, QDataStream &ds, QExeErrorInfo *e
     return true;
 }
 
-class AllocSpan {
+struct AllocSpan {
 public:
     quint32 start;
     quint32 length;
@@ -272,10 +268,13 @@ public:
         this->length = length;
     }
     bool within(quint32 target) const {
-        return target >= start && (start + length) > target;
+        return (target >= start) && ((start + length) > target);
     }
     bool collides(const AllocSpan &other) const {
-        return within(other.start) || within(other.start + other.length - 1) || other.within(start) || other.within(start + length - 1);
+        return within(other.start)
+                || within(other.start + other.length - 1)
+                || other.within(start)
+                || other.within(start + length - 1);
     }
 };
 
@@ -288,7 +287,7 @@ bool checkAlloc(AllocMap &map, AllocSpan span, bool add = true) {
     if (result != map.end())
         return false;
     if (add)
-        map.push_front(span);
+        map.push_back(span);
     return true;
 }
 
@@ -296,7 +295,9 @@ bool QExeSectionManager::test(bool justOrderAndOverlap, quint32 *fileSize, QExeE
 {
     QExeSectionPtr section;
     // -- Test virtual integrity
-    std::sort(sections.begin(), sections.end(), sectionVALessThan);
+    std::sort(sections.begin(), sections.end(), [](const QExeSectionPtr &s1, const QExeSectionPtr &s2) {
+        return s1->virtualAddr < s2->virtualAddr;
+    });
     // set minimum usable RVA
     quint32 rvaHeaderFloor = 0;
     foreach (section, sections) {
@@ -315,7 +316,7 @@ bool QExeSectionManager::test(bool justOrderAndOverlap, quint32 *fileSize, QExeE
     quint32 fileAlign = exeDat->optionalHeader()->fileAlign;
     AllocMap map;
     // disallow collision with primary header
-    map.push_front(AllocSpan(0, exeDat->optionalHeader()->headerSize));
+    map.push_back(AllocSpan(0, exeDat->optionalHeader()->headerSize));
     for (int i = 0; i < 2; i++) {
         foreach (section, sections) {
             if (section->linearize != (i == 0))
@@ -364,11 +365,11 @@ void QExeSectionManager::positionSection(QExeSectionPtr newSec, quint32 i, quint
 {
     AllocMap map;
     // disallow collision with primary header
-    map.push_front(AllocSpan(0, exeDat->optionalHeader()->headerSize));
+    map.push_back(AllocSpan(0, exeDat->optionalHeader()->headerSize));
     // add other sections
     QExeSectionPtr section;
     foreach (section, sections) {
-        map.push_front(AllocSpan(section->virtualAddr, QExe::alignForward(section->virtualSize, sectionAlign)));
+        map.push_back(AllocSpan(section->virtualAddr, QExe::alignForward(section->virtualSize, sectionAlign)));
     }
     AllocSpan as(0, QExe::alignForward(newSec->virtualSize, sectionAlign));
     while (true) {

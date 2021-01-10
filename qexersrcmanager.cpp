@@ -84,14 +84,20 @@ bool QExeRsrcManager::addBeforeRsrcSection(QSharedPointer<QExeSectionManager> se
     return true;
 }
 
-bool QExeRsrcManager::addBeforeRsrcSection(QSharedPointer<QExeSectionManager> secMgr, const QLatin1String &name, QByteArray data, QExeSection::Characteristics chars)
+QExeSectionPtr QExeRsrcManager::addBeforeRsrcSection(QSharedPointer<QExeSectionManager> secMgr, const QLatin1String &name, QByteArray data, QExeSection::Characteristics chars)
 {
-    return addBeforeRsrcSection(secMgr, QExeSectionPtr(new QExeSection(name, data, chars)));
+    QExeSectionPtr newSec = QExeSectionPtr(new QExeSection(name, data, chars));
+    if (!addBeforeRsrcSection(secMgr, newSec))
+        return nullptr;
+    return newSec;
 }
 
-bool QExeRsrcManager::addBeforeRsrcSection(QSharedPointer<QExeSectionManager> secMgr, const QLatin1String &name, quint32 size, QExeSection::Characteristics chars)
+QExeSectionPtr QExeRsrcManager::addBeforeRsrcSection(QSharedPointer<QExeSectionManager> secMgr, const QLatin1String &name, quint32 size, QExeSection::Characteristics chars)
 {
-    return addBeforeRsrcSection(secMgr, QExeSectionPtr(new QExeSection(name, size, chars)));
+    QExeSectionPtr newSec = QExeSectionPtr(new QExeSection(name, size, chars));
+    if (!addBeforeRsrcSection(secMgr, newSec))
+        return nullptr;
+    return newSec;
 }
 
 bool QExeRsrcManager::read(QExeSectionPtr sec, QExeErrorInfo *errinfo)
@@ -109,7 +115,7 @@ bool QExeRsrcManager::read(QExeSectionPtr sec, QExeErrorInfo *errinfo)
     return true;
 }
 
-class QExeRsrcManager::SectionSizes {
+struct QExeRsrcManager::SectionSizes {
 public:
     quint32 directorySize;
     quint32 dataDescSize;
@@ -127,7 +133,7 @@ public:
     }
 };
 
-class QExeRsrcManager::SymbolTable {
+struct QExeRsrcManager::SymbolTable {
 public:
     std::list<QExeRsrcEntryPtr> directories;
     QHash<QExeRsrcEntryPtr, quint32> directoryOffs;
@@ -138,16 +144,16 @@ public:
     QHash<QString, QList<qint64>> stringRefs;
 };
 
-class QExeRsrcManager::SubdirStorage {
+struct QExeRsrcManager::SubdirStorage {
 public:
     std::list<QExeRsrcEntryPtr> id;
     std::list<QExeRsrcEntryPtr> name;
 
     void add(QExeRsrcEntryPtr subdir) {
         if (subdir->name.isEmpty())
-            id.push_front(subdir);
+            id.push_back(subdir);
         else
-            name.push_front(subdir);
+            name.push_back(subdir);
     }
 
     bool empty() {
@@ -299,7 +305,7 @@ QExeRsrcManager::SectionSizes QExeRsrcManager::calculateSectionSizes(QExeRsrcEnt
 
 void QExeRsrcManager::writeDirectory(QBuffer &dst, QDataStream &ds, QExeRsrcEntryPtr dir, QExeRsrcManager::SubdirStorage &subdirs, QExeRsrcManager::SymbolTable &symTbl)
 {
-    symTbl.directories.push_front(dir);
+    symTbl.directories.push_back(dir);
     symTbl.directoryOffs[dir] = static_cast<quint32>(dst.pos());
     // write unimportant stuff
     ds << dir->directoryMeta.characteristics;
@@ -312,10 +318,10 @@ void QExeRsrcManager::writeDirectory(QBuffer &dst, QDataStream &ds, QExeRsrcEntr
     foreach (entry, dir->children()) {
         if (entry->name.isEmpty()) {
             entryCountID++;
-            entriesID.push_front(entry);
+            entriesID.push_back(entry);
         } else {
             entryCountName++;
-            entriesName.push_front(entry);
+            entriesName.push_back(entry);
         }
         if (entry->type() == QExeRsrcEntry::Directory)
             subdirs.add(entry);
@@ -335,7 +341,7 @@ void QExeRsrcManager::writeEntries(QBuffer &dst, QDataStream &ds, std::list<QExe
         if (entry->name.isEmpty())
             ds << entry->id;
         else {
-            symTbl.strings.push_front(entry->name);
+            symTbl.strings.push_back(entry->name);
             symTbl.stringRefs[entry->name] += dst.pos();
             ds << hiMask;
         }
@@ -343,7 +349,7 @@ void QExeRsrcManager::writeEntries(QBuffer &dst, QDataStream &ds, std::list<QExe
             symTbl.directoryRefs[entry] += dst.pos();
             ds << hiMask;
         } else {
-            symTbl.dataDescs.push_front(entry);
+            symTbl.dataDescs.push_back(entry);
             symTbl.dataDescRefs[entry] += dst.pos();
             ds << static_cast<quint32>(0);
             ds << static_cast<quint32>(entry->data.size());

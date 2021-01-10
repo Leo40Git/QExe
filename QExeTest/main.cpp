@@ -33,35 +33,7 @@ void rsrcPrintDirectory(const QString &indent, QExeRsrcEntryPtr dir) {
     }
 }
 
-void waitForEnter() {
-    static std::string line;
-    std::getline(std::cin, line);
-}
-
-int main(int argc, char *argv[])
-{
-    (void)argc, (void)argv;
-
-    QExe exeDat;
-
-    QDir testDir("CaveStoryEN");
-    testDir.makeAbsolute();
-    QFile exeFile(QStringLiteral("%1/Doukutsu.exe").arg(testDir.absolutePath()));
-    if (!exeFile.exists()) {
-        OUT << "Could not find EXE file \"" << exeFile.fileName() << "\":";
-        return 1;
-    }
-    exeFile.open(QFile::ReadOnly);
-    QExeErrorInfo errinfo;
-    if (!exeDat.read(exeFile, &errinfo)) {
-        exeFile.close();
-        OUT << "Error while reading EXE file \"" << exeFile.fileName() << "\":";
-        OUT << "ID: " << errinfo.errorID;
-        OUT << "Details: " << errinfo.details;
-        return 1;
-    }
-    exeFile.close();
-
+void dumpExeDat(QExe &exeDat) {
     QSharedPointer<QExeCOFFHeader> coffHead = exeDat.coffHeader();
     OUT << " == Printing COFF header properties == ";
     OUT << " Machine type: " << coffHead->machineType;
@@ -105,7 +77,7 @@ int main(int argc, char *argv[])
     for (int i = 0; i < secCount; i++) {
         section = secMgr->sectionAt(i);
         OUT << " - \"" << section->name() << "\"";
-        OUT << " Linearized: " << section->linearize;
+        OUT << " Linearized: " << (section->linearize ? "Yes" : "No");
         OUT << " Virtual size: " << HEX(section->virtualSize);
         OUT << " Virtual address: " << HEX(section->virtualAddr);
         OUT << " Raw data size: " << HEX(section->rawData.size());
@@ -115,9 +87,60 @@ int main(int argc, char *argv[])
         OUT << " Line-numbers count: " << HEX(section->linenumsCount);
         OUT << " Characteristics: " << section->characteristics;
     }
+}
+
+void waitForEnter() {
+    static std::string line;
+    std::getline(std::cin, line);
+}
+
+int main(int argc, char *argv[])
+{
+    (void)argc, (void)argv;
+
+    QExe exeDat;
+
+    QDir testDir("CaveStoryEN");
+    testDir.makeAbsolute();
+    QFile exeFile(QStringLiteral("%1/Doukutsu.exe").arg(testDir.absolutePath()));
+    if (!exeFile.exists()) {
+        OUT << "Could not find EXE file \"" << exeFile.fileName() << "\":";
+        return 1;
+    }
+    exeFile.open(QFile::ReadOnly);
+    QExeErrorInfo errinfo;
+    if (!exeDat.read(exeFile, &errinfo)) {
+        exeFile.close();
+        OUT << "Error while reading EXE file \"" << exeFile.fileName() << "\":";
+        OUT << "ID: " << errinfo.errorID;
+        OUT << "Details: " << errinfo.details;
+        return 1;
+    }
+    exeFile.close();
+
+    dumpExeDat(exeDat);
 
     OUT << "Press <RETURN> to continue.";
     waitForEnter();
+
+    /*
+    QFile exeFile2(QStringLiteral("%1/Doukutsu.out.exe").arg(testDir.absolutePath()));
+    if (!exeFile2.exists()) {
+        OUT << "Could not find EXE file \"" << exeFile.fileName() << "\":";
+        return 1;
+    }
+    exeFile2.open(QFile::ReadOnly);
+    if (!exeDat.read(exeFile2, &errinfo)) {
+        exeFile2.close();
+        OUT << "Error while reading EXE file \"" << exeFile2.fileName() << "\":";
+        OUT << "ID: " << errinfo.errorID;
+        OUT << "Details: " << errinfo.details;
+        return 1;
+    }
+    exeFile2.close();
+
+    dumpExeDat(exeDat);
+    */
 
     QExeRsrcManager rsrcMgr;
     int rsrcSecI = exeDat.sectionManager()->rsrcSectionIndex();

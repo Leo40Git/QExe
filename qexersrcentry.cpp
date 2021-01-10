@@ -29,7 +29,7 @@ bool QExeRsrcEntry::addChild(QExeRsrcEntryPtr child)
                 return false;
         }
     }
-    m_children.push_front(child);
+    m_children.push_back(child);
     child->m_parent = QExeRsrcEntryPtr(this);
     return true;
 }
