@@ -209,9 +209,9 @@ bool QExe::updateComponents(quint32 *fileSize, QExeErrorInfo *errinfo)
                 rsrcDir->first = section->virtualAddr;
                 rsrcDir->second = section->virtualSize;
             }
-        } else if (QString(".text").compare(secName) == 0)
+        } else if (QStringLiteral(".text").compare(secName) == 0)
             m_optHead->codeBaseAddr = section->virtualAddr;
-        else if (!m_optHead->isPlus && QString(".rdata").compare(secName) == 0)
+        else if (!m_optHead->isPlus && QStringLiteral(".rdata").compare(secName) == 0)
             m_optHead->dataBaseAddr = section->virtualAddr;
         if (section->characteristics.testFlag(QExeSection::ContainsCode))
             m_optHead->codeSize += section->virtualSize;
@@ -234,16 +234,16 @@ bool QExe::isFillerSection(QExeSectionPtr sec)
     if (sec->characteristics != fillerChrs)
         return false;
     QString name = sec->name();
-    if (!name.startsWith(QString(".flr")))
+    if (!name.startsWith(QStringLiteral(".flr")))
         return false;
     bool ok = false;
-    name.mid(4).toUInt(&ok, 16);
+    name.midRef(4).toUInt(&ok, 16);
     return ok;
 }
 
 QExeSectionPtr QExe::createFillerSection(int num, quint32 addr, quint32 size)
 {
-    QString nameSrc = QString(".flr%1").arg(QString::number(num, 16).toUpper().rightJustified(4, '0'));
+    QString nameSrc = QStringLiteral(".flr%1").arg(QString::number(num, 16).toUpper().rightJustified(4, '0'));
     QExeSectionPtr newSec = QExeSectionPtr(new QExeSection(QLatin1String(nameSrc.toLatin1()), 0, fillerChrs));
     newSec->virtualAddr = addr;
     newSec->virtualSize = size;

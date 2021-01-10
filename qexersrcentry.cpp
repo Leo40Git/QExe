@@ -126,9 +126,9 @@ std::list<QExeRsrcEntryPtr> QExeRsrcEntry::removeAllChildren()
 QString QExeRsrcEntry::path() const {
     if (m_parent.isNull())
         return QStringLiteral("/");
-    return QString("%1%2%3").arg(
+    return QStringLiteral("%1%2%3").arg(
                 m_parent->path(),
-                name.isEmpty() ? QString("*%1").arg(id) : name,
+                name.isEmpty() ? QStringLiteral("*%1").arg(id) : name,
                 m_type == Directory ? "/" : ""
                 );
 }
