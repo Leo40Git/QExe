@@ -4,8 +4,6 @@
 #include <QtEndian>
 #include <QDataStream>
 
-#include <algorithm>
-
 #include "qexe.h"
 
 #define SET_ERROR_INFO(errName) \
@@ -156,8 +154,7 @@ QExeSectionPtr QExeSectionManager::createSectionInternal(QExeSectionPtr newSec)
     int secs;
     if ((secs = sectionCount()) > 0) {
         QExeSectionPtr lastSec = sections[secs - 1];
-        newSec->virtualAddr = lastSec->virtualAddr;
-        newSec->virtualAddr += QExe::alignForward(lastSec->virtualSize, exeDat->optionalHeader()->sectionAlign);
+        newSec->virtualAddr = QExe::alignForward(lastSec->virtualAddr + lastSec->virtualSize, exeDat->optionalHeader()->sectionAlign);
     }
     if (!addSection(newSec))
         return nullptr;

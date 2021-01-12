@@ -5,8 +5,8 @@ QExeSection::QExeSection(QObject *parent) : QObject(parent)
     setName(QLatin1String(""));
     virtualAddr = 0;
     virtualSize = 0;
-    rawDataPtr = 0;
     rawData.resize(0);
+    rawDataPtr = 0;
     characteristics = Characteristics();
     linearize = false;
 }
